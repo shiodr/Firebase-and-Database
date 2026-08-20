@@ -1,3 +1,25 @@
+// =========================================
+// AUTH PANEL SWITCHING
+// =========================================
+
+const loginPanel = document.getElementById("login-panel");
+const registerPanel = document.getElementById("register-panel");
+
+const showRegisterBtn = document.getElementById("show-register");
+const showLoginBtn = document.getElementById("show-login");
+
+
+showRegisterBtn.addEventListener("click", () => {
+  loginPanel.classList.add("hidden");
+  registerPanel.classList.remove("hidden");
+});
+
+
+showLoginBtn.addEventListener("click", () => {
+  registerPanel.classList.add("hidden");
+  loginPanel.classList.remove("hidden");
+});
+
 import { auth, db } from "./firebase-config.js";
 
 import {

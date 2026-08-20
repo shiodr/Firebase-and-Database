@@ -3,152 +3,419 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
     <title>Student Records Management System</title>
+
     <link rel="stylesheet" href="style.css" />
   </head>
+
   <body>
+
+    <!-- HEADER -->
     <header class="site-header">
       <div class="container">
         <h1>Student Records Management System</h1>
-        <p>Firebase Authentication & Cloud Firestore CRUD Application</p>
+        <p>Firebase Authentication &amp; Cloud Firestore CRUD Application</p>
       </div>
     </header>
 
+
     <main class="container">
-      <section id="auth-section" class="auth-container">
-        <div class="card">
-          <h2>Create Account</h2>
 
-          <form id="register-form">
-            <div class="form-group">
-              <label for="register-email">Email</label>
-              <input
-                type="email"
-                id="register-email"
-                placeholder="Enter your email"
-                required
-              />
+      <!-- ================================
+           AUTHENTICATION SECTION
+           ================================ -->
+      <section id="auth-section" class="auth-section">
+
+        <div class="auth-card">
+
+          <!-- LOGIN PANEL -->
+          <div id="login-panel" class="auth-panel">
+
+            <div class="auth-header">
+              <div class="auth-icon">🔐</div>
+
+              <h2>Welcome Back</h2>
+
+              <p>
+                Login to manage your student records.
+              </p>
             </div>
 
-            <div class="form-group">
-              <label for="register-password">Password</label>
-              <input
-                type="password"
-                id="register-password"
-                placeholder="Enter password"
-                required
-              />
+
+            <form id="login-form">
+
+              <div class="form-group">
+                <label for="login-email">Email</label>
+
+                <input
+                  type="email"
+                  id="login-email"
+                  placeholder="Enter your email"
+                  required
+                />
+              </div>
+
+
+              <div class="form-group">
+                <label for="login-password">Password</label>
+
+                <input
+                  type="password"
+                  id="login-password"
+                  placeholder="Enter your password"
+                  required
+                />
+              </div>
+
+
+              <button
+                type="submit"
+                class="btn btn-primary auth-submit"
+              >
+                Login
+              </button>
+
+
+              <p id="login-message" class="message"></p>
+
+            </form>
+
+
+            <div class="auth-switch">
+              <p>
+                Don't have an account?
+
+                <button
+                  type="button"
+                  id="show-register"
+                  class="text-btn"
+                >
+                  Create one
+                </button>
+              </p>
             </div>
 
-            <div class="form-group">
-              <label for="register-confirm-password">Confirm Password</label>
-              <input
-                type="password"
-                id="register-confirm-password"
-                placeholder="Confirm password"
-                required
-              />
+          </div>
+
+
+          <!-- ================================
+               REGISTER PANEL
+               ================================ -->
+          <div
+            id="register-panel"
+            class="auth-panel hidden"
+          >
+
+            <div class="auth-header">
+              <div class="auth-icon">👤</div>
+
+              <h2>Create Account</h2>
+
+              <p>
+                Create an account to manage your student records.
+              </p>
             </div>
 
-            <button type="submit" class="btn btn-primary">Register</button>
-            <p id="register-message" class="message"></p>
-          </form>
+
+            <form id="register-form">
+
+              <div class="form-group">
+                <label for="register-email">Email</label>
+
+                <input
+                  type="email"
+                  id="register-email"
+                  placeholder="Enter your email"
+                  required
+                />
+              </div>
+
+
+              <div class="form-group">
+                <label for="register-password">
+                  Password
+                </label>
+
+                <input
+                  type="password"
+                  id="register-password"
+                  placeholder="Enter password"
+                  required
+                />
+              </div>
+
+
+              <div class="form-group">
+                <label for="register-confirm-password">
+                  Confirm Password
+                </label>
+
+                <input
+                  type="password"
+                  id="register-confirm-password"
+                  placeholder="Confirm password"
+                  required
+                />
+              </div>
+
+
+              <button
+                type="submit"
+                class="btn btn-primary auth-submit"
+              >
+                Create Account
+              </button>
+
+
+              <p id="register-message" class="message"></p>
+
+            </form>
+
+
+            <div class="auth-switch">
+              <p>
+                Already have an account?
+
+                <button
+                  type="button"
+                  id="show-login"
+                  class="text-btn"
+                >
+                  Login
+                </button>
+              </p>
+            </div>
+
+          </div>
+
         </div>
 
-        <div class="card">
-          <h2>Login</h2>
-
-          <form id="login-form">
-            <div class="form-group">
-              <label for="login-email">Email</label>
-              <input
-                type="email"
-                id="login-email"
-                placeholder="Enter your email"
-                required
-              />
-            </div>
-
-            <div class="form-group">
-              <label for="login-password">Password</label>
-              <input
-                type="password"
-                id="login-password"
-                placeholder="Enter password"
-                required
-              />
-            </div>
-
-            <button type="submit" class="btn btn-primary">Login</button>
-            <p id="login-message" class="message"></p>
-          </form>
-        </div>
       </section>
 
+
+      <!-- ================================
+           APPLICATION SECTION
+           ================================ -->
       <section id="app-section" class="hidden">
+
+
+        <!-- USER BAR -->
         <div class="user-bar">
+
           <div>
             <strong>Logged in as:</strong>
+
             <span id="user-email"></span>
           </div>
 
-          <button id="logout-btn" class="btn btn-danger">Logout</button>
+
+          <button
+            id="logout-btn"
+            class="btn btn-danger"
+          >
+            Logout
+          </button>
+
         </div>
 
+
+        <!-- ================================
+             STUDENT FORM
+             ================================ -->
         <div class="card">
-          <h2 id="form-title">Add Student Record</h2>
+
+          <h2 id="form-title">
+            Add Student Record
+          </h2>
+
 
           <form id="student-form">
+
             <div class="form-grid">
+
+
+              <!-- FULL NAME -->
               <div class="form-group">
-                <label for="full-name">Full Name</label>
-                <input type="text" id="full-name" placeholder="Juan Dela Cruz" required />
+
+                <label for="full-name">
+                  Full Name
+                </label>
+
+                <input
+                  type="text"
+                  id="full-name"
+                  placeholder="Juan Dela Cruz"
+                  required
+                />
+
               </div>
 
+
+              <!-- STUDENT ID -->
               <div class="form-group">
-                <label for="student-id">Student ID</label>
-                <input type="text" id="student-id" placeholder="20260001" required />
+
+                <label for="student-id">
+                  Student ID
+                </label>
+
+                <input
+                  type="text"
+                  id="student-id"
+                  placeholder="20260001"
+                  required
+                />
+
               </div>
 
+
+              <!-- PROGRAMME -->
               <div class="form-group">
-                <label for="programme">Programme</label>
-                <input type="text" id="programme" placeholder="BSIT" required />
+
+                <label for="programme">
+                  Programme
+                </label>
+
+                <input
+                  type="text"
+                  id="programme"
+                  placeholder="BSIT"
+                  required
+                />
+
               </div>
 
+
+              <!-- YEAR -->
               <div class="form-group">
-                <label for="year">Year</label>
-                <input type="number" id="year" min="1" max="6" placeholder="4" required />
+
+                <label for="year">
+                  Year
+                </label>
+
+                <input
+                  type="number"
+                  id="year"
+                  min="1"
+                  max="6"
+                  placeholder="4"
+                  required
+                />
+
               </div>
 
+
+              <!-- EMAIL -->
               <div class="form-group">
-                <label for="student-email">Email</label>
-                <input type="email" id="student-email" placeholder="student@example.com" required />
+
+                <label for="student-email">
+                  Email
+                </label>
+
+                <input
+                  type="email"
+                  id="student-email"
+                  placeholder="student@example.com"
+                  required
+                />
+
               </div>
 
+
+              <!-- FAVOURITE TECHNOLOGY -->
               <div class="form-group">
-                <label for="favourite-technology">Favourite Technology</label>
-                <input type="text" id="favourite-technology" placeholder="JavaScript" required />
+
+                <label for="favourite-technology">
+                  Favourite Technology
+                </label>
+
+                <input
+                  type="text"
+                  id="favourite-technology"
+                  placeholder="JavaScript"
+                  required
+                />
+
               </div>
+
+
+              <!-- PORTFOLIO LINK -->
+              <div class="form-group">
+
+                <label for="portfolio-link">
+                  Portfolio Link
+                </label>
+
+                <input
+                  type="url"
+                  id="portfolio-link"
+                  placeholder="https://yourportfolio.com"
+                />
+
+              </div>
+
+
             </div>
 
+
+            <!-- FORM BUTTONS -->
             <div class="form-actions">
-              <button type="submit" id="submit-btn" class="btn btn-primary">Add Record</button>
-              <button type="button" id="cancel-edit-btn" class="btn btn-secondary hidden">Cancel Edit</button>
+
+              <button
+                type="submit"
+                id="submit-btn"
+                class="btn btn-primary"
+              >
+                Add Record
+              </button>
+
+
+              <button
+                type="button"
+                id="cancel-edit-btn"
+                class="btn btn-secondary hidden"
+              >
+                Cancel Edit
+              </button>
+
             </div>
 
-            <p id="student-message" class="message"></p>
+
+            <p
+              id="student-message"
+              class="message"
+            ></p>
+
           </form>
+
         </div>
 
+
+        <!-- ================================
+             STUDENT RECORDS
+             ================================ -->
         <div class="card">
+
           <div class="records-header">
+
             <h2>My Student Records</h2>
-            <button id="refresh-btn" class="btn btn-secondary">Refresh</button>
+
+            <button
+              id="refresh-btn"
+              class="btn btn-secondary"
+            >
+              Refresh
+            </button>
+
           </div>
 
+
           <div class="table-wrapper">
+
             <table>
+
               <thead>
+
                 <tr>
                   <th>Full Name</th>
                   <th>Student ID</th>
@@ -156,24 +423,50 @@
                   <th>Year</th>
                   <th>Email</th>
                   <th>Favourite Technology</th>
+                  <th>Portfolio</th>
                   <th>Actions</th>
                 </tr>
+
               </thead>
+
+
               <tbody id="records-body">
+
                 <tr>
-                  <td colspan="7" class="empty">No records found.</td>
+                  <td
+                    colspan="8"
+                    class="empty"
+                  >
+                    No records found.
+                  </td>
                 </tr>
+
               </tbody>
+
             </table>
+
           </div>
+
         </div>
+
+
       </section>
+
     </main>
 
+
+    <!-- FOOTER -->
     <footer>
-      <p>Student Records Management System</p>
+
+      <p>
+        Student Records Management System
+      </p>
+
     </footer>
 
+
+    <!-- JAVASCRIPT -->
     <script type="module" src="app.js"></script>
+
   </body>
 </html>
