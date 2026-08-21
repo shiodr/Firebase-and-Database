@@ -3,470 +3,123 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-    <title>Student Records Management System</title>
-
+    <meta name="theme-color" content="#102a43" />
+    <title>Student Records | Management System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="style.css" />
   </head>
-
   <body>
-
-    <!-- HEADER -->
     <header class="site-header">
-      <div class="container">
-        <h1>Student Records Management System</h1>
-        <p>Firebase Authentication &amp; Cloud Firestore CRUD Application</p>
+      <div class="container header-inner">
+        <a class="brand" href="./" aria-label="Student Records home">
+          <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+          <span>Student Records</span>
+        </a>
+        <span class="header-label">Academic workspace</span>
       </div>
     </header>
 
-
     <main class="container">
-
-      <!-- ================================
-           AUTHENTICATION SECTION
-           ================================ -->
       <section id="auth-section" class="auth-section">
+        <div class="auth-intro">
+          <p class="eyebrow">Student records management</p>
+          <h1>Keep every student detail within reach.</h1>
+          <p class="intro-copy">A focused workspace for organising student information securely and confidently.</p>
+          <div class="intro-rule" aria-hidden="true"></div>
+          <p class="intro-note">Your records are private to your account.</p>
+        </div>
 
         <div class="auth-card">
-
-          <!-- LOGIN PANEL -->
           <div id="login-panel" class="auth-panel">
-
             <div class="auth-header">
-              <div class="auth-icon">🔐</div>
-
-              <h2>Welcome Back</h2>
-
-              <p>
-                Login to manage your student records.
-              </p>
+              <div class="auth-icon" aria-hidden="true"><span></span><span></span></div>
+              <p class="eyebrow">Welcome back</p>
+              <h2>Sign in to continue</h2>
+              <p>Access your student records workspace.</p>
             </div>
-
-
             <form id="login-form">
-
               <div class="form-group">
-                <label for="login-email">Email</label>
-
-                <input
-                  type="email"
-                  id="login-email"
-                  placeholder="Enter your email"
-                  required
-                />
+                <label for="login-email">Email address</label>
+                <input type="email" id="login-email" placeholder="you@university.edu" autocomplete="email" required />
               </div>
-
-
               <div class="form-group">
                 <label for="login-password">Password</label>
-
-                <input
-                  type="password"
-                  id="login-password"
-                  placeholder="Enter your password"
-                  required
-                />
+                <input type="password" id="login-password" placeholder="Enter your password" autocomplete="current-password" required />
               </div>
-
-
-              <button
-                type="submit"
-                class="btn btn-primary auth-submit"
-              >
-                Login
-              </button>
-
-
-              <p id="login-message" class="message"></p>
-
+              <button type="submit" class="btn btn-primary auth-submit">Sign in <span aria-hidden="true">&#8594;</span></button>
+              <p id="login-message" class="message" role="alert"></p>
             </form>
-
-
-            <div class="auth-switch">
-              <p>
-                Don't have an account?
-
-                <button
-                  type="button"
-                  id="show-register"
-                  class="text-btn"
-                >
-                  Create one
-                </button>
-              </p>
-            </div>
-
+            <div class="auth-switch"><p>New to Student Records? <button type="button" id="show-register" class="text-btn">Create an account</button></p></div>
           </div>
 
-
-          <!-- ================================
-               REGISTER PANEL
-               ================================ -->
-          <div
-            id="register-panel"
-            class="auth-panel hidden"
-          >
-
+          <div id="register-panel" class="auth-panel hidden">
             <div class="auth-header">
-              <div class="auth-icon">👤</div>
-
-              <h2>Create Account</h2>
-
-              <p>
-                Create an account to manage your student records.
-              </p>
+              <div class="auth-icon" aria-hidden="true"><span></span><span></span></div>
+              <p class="eyebrow">Get started</p>
+              <h2>Create your account</h2>
+              <p>Set up a secure workspace for your records.</p>
             </div>
-
-
             <form id="register-form">
-
               <div class="form-group">
-                <label for="register-email">Email</label>
-
-                <input
-                  type="email"
-                  id="register-email"
-                  placeholder="Enter your email"
-                  required
-                />
+                <label for="register-email">Email address</label>
+                <input type="email" id="register-email" placeholder="you@university.edu" autocomplete="email" required />
               </div>
-
-
               <div class="form-group">
-                <label for="register-password">
-                  Password
-                </label>
-
-                <input
-                  type="password"
-                  id="register-password"
-                  placeholder="Enter password"
-                  required
-                />
+                <label for="register-password">Password</label>
+                <input type="password" id="register-password" placeholder="Create a password" autocomplete="new-password" required />
               </div>
-
-
               <div class="form-group">
-                <label for="register-confirm-password">
-                  Confirm Password
-                </label>
-
-                <input
-                  type="password"
-                  id="register-confirm-password"
-                  placeholder="Confirm password"
-                  required
-                />
+                <label for="register-confirm-password">Confirm password</label>
+                <input type="password" id="register-confirm-password" placeholder="Repeat your password" autocomplete="new-password" required />
               </div>
-
-
-              <button
-                type="submit"
-                class="btn btn-primary auth-submit"
-              >
-                Create Account
-              </button>
-
-
-              <p id="register-message" class="message"></p>
-
+              <button type="submit" class="btn btn-primary auth-submit">Create account <span aria-hidden="true">&#8594;</span></button>
+              <p id="register-message" class="message" role="alert"></p>
             </form>
-
-
-            <div class="auth-switch">
-              <p>
-                Already have an account?
-
-                <button
-                  type="button"
-                  id="show-login"
-                  class="text-btn"
-                >
-                  Login
-                </button>
-              </p>
-            </div>
-
+            <div class="auth-switch"><p>Already have an account? <button type="button" id="show-login" class="text-btn">Sign in</button></p></div>
           </div>
-
         </div>
-
       </section>
 
-
-      <!-- ================================
-           APPLICATION SECTION
-           ================================ -->
       <section id="app-section" class="hidden">
-
-
-        <!-- USER BAR -->
-        <div class="user-bar">
-
+        <div class="dashboard-heading">
           <div>
-            <strong>Logged in as:</strong>
-
-            <span id="user-email"></span>
+            <p class="eyebrow">Overview</p>
+            <h1>Welcome to your Student Records Dashboard</h1>
+            <p class="section-lede">Create, review, and maintain your student directory.</p>
           </div>
-
-
-          <button
-            id="logout-btn"
-            class="btn btn-danger"
-          >
-            Logout
-          </button>
-
+          <div class="user-bar">
+            <div class="account-summary"><span class="avatar" aria-hidden="true">&#10003;</span><div><span class="account-label">Signed in as</span><strong id="user-email"></strong></div></div>
+            <button id="logout-btn" class="btn btn-quiet"><span aria-hidden="true">&#8599;</span> Log out</button>
+          </div>
         </div>
 
-
-        <!-- ================================
-             STUDENT FORM
-             ================================ -->
-        <div class="card">
-
-          <h2 id="form-title">
-            Add Student Record
-          </h2>
-
-
+        <div class="card form-card">
+          <div class="card-heading"><div><p class="eyebrow">Directory</p><h2 id="form-title">Add Student Record</h2><p class="card-lede">Capture the essential details for a student.</p></div><span class="card-index">01</span></div>
           <form id="student-form">
-
             <div class="form-grid">
-
-
-              <!-- FULL NAME -->
-              <div class="form-group">
-
-                <label for="full-name">
-                  Full Name
-                </label>
-
-                <input
-                  type="text"
-                  id="full-name"
-                  placeholder="Juan Dela Cruz"
-                  required
-                />
-
-              </div>
-
-
-              <!-- STUDENT ID -->
-              <div class="form-group">
-
-                <label for="student-id">
-                  Student ID
-                </label>
-
-                <input
-                  type="text"
-                  id="student-id"
-                  placeholder="20260001"
-                  required
-                />
-
-              </div>
-
-
-              <!-- PROGRAMME -->
-              <div class="form-group">
-
-                <label for="programme">
-                  Programme
-                </label>
-
-                <input
-                  type="text"
-                  id="programme"
-                  placeholder="BSIT"
-                  required
-                />
-
-              </div>
-
-
-              <!-- YEAR -->
-              <div class="form-group">
-
-                <label for="year">
-                  Year
-                </label>
-
-                <input
-                  type="number"
-                  id="year"
-                  min="1"
-                  max="6"
-                  placeholder="4"
-                  required
-                />
-
-              </div>
-
-
-              <!-- EMAIL -->
-              <div class="form-group">
-
-                <label for="student-email">
-                  Email
-                </label>
-
-                <input
-                  type="email"
-                  id="student-email"
-                  placeholder="student@example.com"
-                  required
-                />
-
-              </div>
-
-
-              <!-- FAVOURITE TECHNOLOGY -->
-              <div class="form-group">
-
-                <label for="favourite-technology">
-                  Favourite Technology
-                </label>
-
-                <input
-                  type="text"
-                  id="favourite-technology"
-                  placeholder="JavaScript"
-                  required
-                />
-
-              </div>
-
-
-              <!-- PORTFOLIO LINK -->
-              <div class="form-group">
-
-                <label for="portfolio-link">
-                  Portfolio Link
-                </label>
-
-                <input
-                  type="url"
-                  id="portfolio-link"
-                  placeholder="https://yourportfolio.com"
-                />
-
-              </div>
-
-
+              <div class="form-group"><label for="full-name">Full Name</label><input type="text" id="full-name" placeholder="Juan Dela Cruz" required /></div>
+              <div class="form-group"><label for="student-id">Student ID</label><input type="text" id="student-id" placeholder="20260001" required /></div>
+              <div class="form-group"><label for="programme">Programme</label><input type="text" id="programme" placeholder="Bachelor of Science in IT" required /></div>
+              <div class="form-group"><label for="year">Year</label><input type="number" id="year" min="1" max="6" placeholder="4" required /></div>
+              <div class="form-group"><label for="student-email">Email</label><input type="email" id="student-email" placeholder="student@example.com" required /></div>
+              <div class="form-group"><label for="favourite-technology">Favourite Technology</label><input type="text" id="favourite-technology" placeholder="JavaScript" required /></div>
+              <div class="form-group"><label for="portfolio-link">Portfolio Link <span class="optional">Optional</span></label><input type="url" id="portfolio-link" placeholder="https://yourportfolio.com" /></div>
             </div>
-
-
-            <!-- FORM BUTTONS -->
-            <div class="form-actions">
-
-              <button
-                type="submit"
-                id="submit-btn"
-                class="btn btn-primary"
-              >
-                Add Record
-              </button>
-
-
-              <button
-                type="button"
-                id="cancel-edit-btn"
-                class="btn btn-secondary hidden"
-              >
-                Cancel Edit
-              </button>
-
-            </div>
-
-
-            <p
-              id="student-message"
-              class="message"
-            ></p>
-
+            <div class="form-actions"><button type="submit" id="submit-btn" class="btn btn-primary">Add record <span aria-hidden="true">&#8594;</span></button><button type="button" id="cancel-edit-btn" class="btn btn-secondary hidden">Cancel edit</button></div>
+            <p id="student-message" class="message" role="status"></p>
           </form>
-
         </div>
 
-
-        <!-- ================================
-             STUDENT RECORDS
-             ================================ -->
-        <div class="card">
-
-          <div class="records-header">
-
-            <h2>My Student Records</h2>
-
-            <button
-              id="refresh-btn"
-              class="btn btn-secondary"
-            >
-              Refresh
-            </button>
-
-          </div>
-
-
-          <div class="table-wrapper">
-
-            <table>
-
-              <thead>
-
-                <tr>
-                  <th>Full Name</th>
-                  <th>Student ID</th>
-                  <th>Programme</th>
-                  <th>Year</th>
-                  <th>Email</th>
-                  <th>Favourite Technology</th>
-                  <th>Portfolio</th>
-                  <th>Actions</th>
-                </tr>
-
-              </thead>
-
-
-              <tbody id="records-body">
-
-                <tr>
-                  <td
-                    colspan="8"
-                    class="empty"
-                  >
-                    No records found.
-                  </td>
-                </tr>
-
-              </tbody>
-
-            </table>
-
-          </div>
-
+        <div class="card records-card">
+          <div class="records-header"><div><p class="eyebrow">Your directory</p><h2>My Student Records</h2></div><button id="refresh-btn" class="btn btn-quiet"><span aria-hidden="true">&#8635;</span> Refresh</button></div>
+          <div class="table-wrapper"><table><thead><tr><th>Full Name</th><th>Student ID</th><th>Programme</th><th>Year</th><th>Email</th><th>Favourite Technology</th><th>Portfolio</th><th>Actions</th></tr></thead><tbody id="records-body"><tr><td colspan="8" class="empty">No records found.</td></tr></tbody></table></div>
         </div>
-
-
       </section>
-
     </main>
 
-
-    <!-- FOOTER -->
-    <footer>
-
-      <p>
-        Student Records Management System
-      </p>
-
-    </footer>
-
-
-    <!-- JAVASCRIPT -->
+    <footer><p>Student Records Management System <span aria-hidden="true">&middot;</span> Private by design</p></footer>
     <script type="module" src="app.js"></script>
-
   </body>
 </html>
