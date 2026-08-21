@@ -200,7 +200,7 @@ studentForm.addEventListener("submit", async (event) => {
     await loadRecords();
   } catch (error) {
     console.error(error);
-    showMessage(studentMessage, "Unable to save the record.", "error");
+    showMessage(studentMessage, getFirestoreErrorMessage(error), "error");
   }
 });
 
@@ -331,6 +331,19 @@ function getAuthErrorMessage(code) {
       return "Invalid email or password.";
     default:
       return "An authentication error occurred.";
+  }
+}
+
+function getFirestoreErrorMessage(error) {
+  switch (error.code) {
+    case "permission-denied":
+      return "Permission denied. Check that your Firestore rules allow your account to manage its own records.";
+    case "unavailable":
+      return "Firestore is temporarily unavailable. Check your connection and try again.";
+    case "failed-precondition":
+      return "Firestore is not ready for this request. Check the Firebase project configuration.";
+    default:
+      return "Unable to save the record. Please try again.";
   }
 }
 
