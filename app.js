@@ -57,6 +57,8 @@ const submitBtn = document.getElementById("submit-btn");
 const cancelEditBtn = document.getElementById("cancel-edit-btn");
 const formTitle = document.getElementById("form-title");
 const refreshBtn = document.getElementById("refresh-btn");
+const searchBtn = document.getElementById("search-btn");
+const searchInput = document.getElementById("search-input");
 
 let currentUser = null;
 let editingRecordId = null;
@@ -86,7 +88,18 @@ function getStudentFormData() {
     year: Number(document.getElementById("year").value),
     email: document.getElementById("student-email").value.trim(),
     favouriteTechnology: document.getElementById("favourite-technology").value.trim(),
+    portfolioLink: normalizePortfolioLink(document.getElementById("portfolio-link").value),
   };
+}
+
+function normalizePortfolioLink(value) {
+  const portfolioLink = value.trim();
+
+  if (!portfolioLink || /^[a-z][a-z\d+.-]*:\/\//i.test(portfolioLink)) {
+    return portfolioLink;
+  }
+
+  return `https://${portfolioLink}`;
 }
 
 function populateStudentForm(data) {
@@ -96,6 +109,7 @@ function populateStudentForm(data) {
   document.getElementById("year").value = data.year || "";
   document.getElementById("student-email").value = data.email || "";
   document.getElementById("favourite-technology").value = data.favouriteTechnology || "";
+  document.getElementById("portfolio-link").value = data.portfolioLink || "";
 }
 
 registerForm.addEventListener("submit", async (event) => {
@@ -161,7 +175,7 @@ onAuthStateChanged(auth, async (user) => {
     clearStudentForm();
     recordsBody.innerHTML = `
       <tr>
-        <td colspan="7" class="empty">No records found.</td>
+        <td colspan="8" class="empty">No records found.</td>
       </tr>
     `;
   }
@@ -211,7 +225,7 @@ async function loadRecords() {
 
   recordsBody.innerHTML = `
     <tr>
-      <td colspan="7" class="empty">Loading records...</td>
+      <td colspan="8" class="empty">Loading records...</td>
     </tr>
   `;
 
@@ -225,7 +239,7 @@ async function loadRecords() {
     if (querySnapshot.empty) {
       recordsBody.innerHTML = `
         <tr>
-          <td colspan="7" class="empty">No records found.</td>
+          <td colspan="8" class="empty">No records found.</td>
         </tr>
       `;
       return;
@@ -242,6 +256,7 @@ async function loadRecords() {
         <td>${escapeHTML(String(data.year))}</td>
         <td>${escapeHTML(data.email)}</td>
         <td>${escapeHTML(data.favouriteTechnology)}</td>
+        <td>${renderPortfolioLink(data.portfolioLink)}</td>
         <td>
           <div class="actions">
             <button class="btn btn-edit" data-action="edit" data-id="${documentSnapshot.id}">Edit</button>
@@ -257,11 +272,13 @@ async function loadRecords() {
 
       recordsBody.appendChild(row);
     });
+
+    applySearch();
   } catch (error) {
     console.error(error);
     recordsBody.innerHTML = `
       <tr>
-        <td colspan="7" class="empty">Unable to load records.</td>
+        <td colspan="8" class="empty">Unable to load records.</td>
       </tr>
     `;
   }
@@ -312,8 +329,54 @@ cancelEditBtn.addEventListener("click", () => {
 });
 
 refreshBtn.addEventListener("click", async () => {
+  searchInput.value = "";
+  searchInput.classList.add("hidden");
+  searchBtn.setAttribute("aria-expanded", "false");
   await loadRecords();
 });
+
+searchBtn.addEventListener("click", () => {
+  if (searchInput.classList.contains("hidden")) {
+    searchInput.classList.remove("hidden");
+    searchBtn.setAttribute("aria-expanded", "true");
+    searchInput.focus();
+    return;
+  }
+
+  applySearch();
+});
+
+searchInput.addEventListener("input", applySearch);
+
+searchInput.addEventListener("search", applySearch);
+
+function applySearch() {
+  const searchTerm = searchInput.value.trim().toLowerCase();
+  const rows = recordsBody.querySelectorAll("tr");
+
+  rows.forEach((row) => {
+    if (!row.dataset.record) {
+      row.hidden = false;
+      return;
+    }
+
+    const record = JSON.parse(row.dataset.record);
+    const searchableDetails = [
+      record.fullName,
+      record.studentID,
+      record.programme,
+      record.year,
+      record.email,
+      record.favouriteTechnology,
+      record.portfolioLink,
+    ]
+      .filter((value) => value !== undefined && value !== null)
+      .join(" ")
+      .toLowerCase();
+
+    row.hidden = Boolean(searchTerm) && !searchableDetails.includes(searchTerm);
+  });
+}
 
 function getAuthErrorMessage(code) {
   switch (code) {
@@ -354,4 +417,20 @@ function escapeHTML(value) {
     .replace(/>/g, "&gt;")
     .replace(/\"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+function renderPortfolioLink(value) {
+  if (!value) {
+    return "<span class=\"muted-cell\">No link</span>";
+  }
+
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return "<span class=\"muted-cell\">Invalid link</span>";
+    }
+    return `<a href="${escapeHTML(url.href)}" target="_blank" rel="noopener noreferrer">View portfolio</a>`;
+  } catch {
+    return "<span class=\"muted-cell\">Invalid link</span>";
+  }
 }
