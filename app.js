@@ -1092,13 +1092,19 @@ async function sendChatMessage() {
       data.textResponse = generateClientSideResponse(text, studentContext);
     }
 
-    // Intercept any fake "I have added / successfully saved" confirmations from the AI
-    // (the AI cannot write to Firestore — replace with an honest action card response)
-    const fakeConfirmPattern = /\b(i have (successfully |)added|i have (successfully |)saved|i have (successfully |)created|successfully (added|saved|created|inserted)|i('ve| have) (added|saved|created))\b/i;
+    // Intercept any fake "I have added / successfully saved / [confirming]" confirmations from the AI.
+    // The AI server CANNOT write to Firestore. Only the browser JS can. Replace with honest guidance.
+    const fakeConfirmPattern = /(\[confirming\]|i have\s+(?:successfully\s+)?(?:added|saved|created|inserted)|successfully\s+(?:added|saved|created|inserted)|has\s+been\s+(?:successfully\s+)?(?:added|saved|created|inserted)|been\s+(?:successfully\s+)?(?:added|saved|created|entered|recorded)|record\s+(?:has\s+been|was)\s+(?:successfully\s+)?(?:added|saved|created))/i;
     if (fakeConfirmPattern.test(data.textResponse)) {
-      data.textResponse =
-        "I detected the student details in your message. Please use the **⚡ Save to Database** button below to actually save the record — I can read your records, but only the browser's JavaScript can write to Firestore." +
-        (detectedStudent ? "" : " Provide full student details (name, ID, programme, year, email, favourite technology) and I'll show the save button.");
+      if (detectedStudent && Object.keys(detectedStudent).length >= 2) {
+        data.textResponse =
+          "I detected student details in your message. Since I can only read data (not write), " +
+          "please click the **⚡ Save to Database** button in the card below to actually save the record.";
+      } else {
+        data.textResponse =
+          "To save a student record, please provide all required details: **Full Name, Student ID, Programme, Year, Email, and Favourite Technology**. " +
+          "Once detected, a **⚡ Save to Database** button will appear so the browser can write it to Firestore.";
+      }
     }
 
     // Display Bot response
@@ -1324,45 +1330,103 @@ function getLoadedRecordsSummary() {
 function parseStudentEntitiesFromText(text) {
   const result = {};
 
-  // Email detection
-  const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+  // ── EMAIL ────────────────────────────────────────────────────────────────
+  const emailMatch = text.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/);
   if (emailMatch) result.email = emailMatch[0];
 
-  // Student ID detection (e.g. 2026-0001, 20260001, ID: 12345)
-  const idMatch = text.match(/(?:id|student\s*id)[:=\s]*([0-9]{4,}[-0-9]*)/i) || text.match(/\b(20[123][0-9][-0-9]{3,})\b/);
-  if (idMatch) result.studentID = idMatch[1];
-
-  // Year detection (e.g. 3rd year, Year 4, 2nd)
-  const yearMatch = text.match(/(?:year|yr)[:=\s]*([1-6])/i) || text.match(/\b([1-6])(?:st|nd|rd|th)?\s*year\b/i);
-  if (yearMatch) result.year = Number(yearMatch[1]);
-
-  // Programme detection
-  const progMatch = text.match(/\b(BSIT|BSCS|BSCpE|BSIS|BSEMC|ACT|IT|CS)\b/i);
-  if (progMatch) {
-    result.programme = progMatch[0].toUpperCase();
+  // ── STUDENT ID ──────────────────────────────────────────────────────────
+  // Handles: "ID: 2026001", "student ID will be 2026001", "ID is 2026-0001", bare numbers like 2026-0001
+  const idPatterns = [
+    /(?:student[\s\-]*id|id)\s*(?:will\s+be|would\s+be|is|are|:|=|will)\s*([0-9]{4,}[\-0-9]*)/i,
+    /\bid\b[^\d]*([0-9]{4,}[\-0-9]*)/i,
+    /\b(20[1-9][0-9][\-][0-9]{3,})\b/,
+    /\b(20[1-9][0-9][0-9]{3,})\b/,
+  ];
+  for (const pat of idPatterns) {
+    const m = text.match(pat);
+    if (m && m[1]) { result.studentID = m[1].trim(); break; }
   }
 
-  // Portfolio link detection
-  const urlMatch = text.match(/(?:https?:\/\/|www\.)[^\s,]+/i) || text.match(/(?:github\.com|linkedin\.com|portfolio)[:\s/]*([^\s,]+)/i);
-  if (urlMatch) result.portfolioLink = urlMatch[0];
+  // ── YEAR (ordinal words AND numbers) ────────────────────────────────────
+  const ordinalToNum = { first: 1, second: 2, third: 3, fourth: 4, fifth: 5, sixth: 6 };
+  const yearWordMatch = text.match(/\b(first|second|third|fourth|fifth|sixth)\s*year\b/i);
+  if (yearWordMatch) {
+    result.year = ordinalToNum[yearWordMatch[1].toLowerCase()];
+  } else {
+    const yearNumMatch =
+      text.match(/(?:year|yr)\s*(?:is|:|\s+)?\s*([1-6])\b/i) ||
+      text.match(/\b([1-6])(?:st|nd|rd|th)?\s*year\b/i) ||
+      text.match(/year\s*(?:level)?\s*([1-6])\b/i);
+    if (yearNumMatch) result.year = Number(yearNumMatch[1]);
+  }
 
-  // Favourite technology detection (matches keywords like Flutter, React, Python, etc.)
-  const techKeywords = ["flutter", "react", "python", "javascript", "typescript", "java", "c#", "c++", "php", "swift", "kotlin", "node", "unity", "vue", "angular", "firebase", "sql"];
+  // ── PROGRAMME ────────────────────────────────────────────────────────────
+  // Try abbreviations first, then map long-form names to abbreviations
+  const progAbbrevMatch = text.match(/\b(BSIT|BSCS|BSCpE|BSIS|BSEMC|ACT)\b/i);
+  if (progAbbrevMatch) {
+    result.programme = progAbbrevMatch[0].toUpperCase();
+  } else {
+    const progMap = [
+      [/bachelor\s+of\s+science\s+in\s+information\s+(?:and\s+)?tech(?:nology)?/i,                "BSIT"],
+      [/information\s+(?:and\s+)?technology|bs\s*it\b/i,                                          "BSIT"],
+      [/bachelor\s+of\s+science\s+in\s+computer\s+science|bs\s*cs\b/i,                           "BSCS"],
+      [/bachelor\s+of\s+science\s+in\s+computer\s+engineer|bs\s*cpe\b/i,                         "BSCpE"],
+      [/bachelor\s+of\s+science\s+in\s+information\s+system/i,                                    "BSIS"],
+      [/bachelor\s+of\s+science\s+in\s+(?:entertainment|multimedia|emc)/i,                        "BSEMC"],
+      [/associate\s+in\s+computer\s+tech/i,                                                       "ACT"],
+      [/\bcomputer\s+science\b/i,                                                                  "BSCS"],
+      [/\bcomputer\s+engineering\b/i,                                                              "BSCpE"],
+    ];
+    for (const [pat, abbrev] of progMap) {
+      if (pat.test(text)) { result.programme = abbrev; break; }
+    }
+  }
+
+  // ── PORTFOLIO LINK ───────────────────────────────────────────────────────
+  const urlMatch = text.match(/(?:https?:\/\/|www\.)[^\s,]+/i) ||
+                   text.match(/(?:github\.com|linkedin\.com)[:\s/]*([^\s,]+)/i);
+  if (urlMatch) result.portfolioLink = urlMatch[0];
+  // "nothing", "none", "N/A" for portfolio → leave empty (no portfolioLink key)
+
+  // ── FAVOURITE TECHNOLOGY ─────────────────────────────────────────────────
+  const techKeywords = [
+    "flutter", "react", "python", "javascript", "typescript",
+    "java",    "c#",    "c\\+\\+", "php",    "swift",
+    "kotlin",  "node",  "unity",   "vue",    "angular",
+    "firebase","sql",   "dart",    "golang", "rust",
+    "ruby",    "django","spring",  "laravel",
+  ];
   for (const tech of techKeywords) {
     const regex = new RegExp(`\\b${tech}\\b`, "i");
     if (regex.test(text)) {
-      result.favouriteTechnology = tech.charAt(0).toUpperCase() + tech.slice(1);
+      // Normalize display name
+      const displayMap = { "c\\+\\+": "C++", "c#": "C#", "golang": "Go" };
+      result.favouriteTechnology = displayMap[tech] || (tech.charAt(0).toUpperCase() + tech.slice(1));
       break;
     }
   }
 
-  // Full Name detection
-  const nameMatch = text.match(/(?:name|student)[:=\s]*([a-zA-Z\s.]+?)(?:,|\n|id|programme|year|email|$)/i) ||
-                    text.match(/(?:add|create)\s+(?:student\s+)?([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/);
-  if (nameMatch) {
-    const rawName = nameMatch[1].trim();
-    if (rawName.length > 2 && rawName.length < 50) {
-      result.fullName = rawName;
+  // ── FULL NAME ────────────────────────────────────────────────────────────
+  // Handles: "The full name is Juan De La Cruz", "name: Maria Santos", spoken format
+  const namePatterns = [
+    // "full name is Juan De La Cruz" or "full name will be..."
+    /(?:full\s+name\s+(?:is|will\s+be|would\s+be)|my\s+name\s+is)\s+([A-Za-z][a-zA-Z'\-]+(?:\s+(?:De|La|San|Van|Von|da|de|del|Di|El|le|los|las|Al|bin|binti|Jr|Sr|III?)?\s*[A-Za-z'\-]+){1,5})/i,
+    // "name: Juan De La Cruz" or "name is ..."
+    /\bname\s*(?:is|:)\s*([A-Z][a-zA-Z'\-]+(?:\s+[A-Za-z'\-]+){1,4})/i,
+    // Comma-separated intro: "The full name, Juan De La Cruz"
+    /(?:full\s+name|student\s+name)[,\s]+([A-Z][a-zA-Z'\-]+(?:\s+[A-Za-z'\-]+){1,4})/i,
+    // Fallback: "add/create student Juan De La Cruz"
+    /(?:add|create|register)\s+(?:student\s+)?([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/,
+  ];
+  for (const pat of namePatterns) {
+    const m = text.match(pat);
+    if (m && m[1]) {
+      const raw = m[1].trim().replace(/\s+/g, " ");
+      // Reject if it looks like a keyword/sentence fragment
+      if (raw.length >= 4 && raw.length <= 60 && !/(?:is|will|student|record|programme|year|email|nothing|none)/i.test(raw)) {
+        result.fullName = raw;
+        break;
+      }
     }
   }
 
