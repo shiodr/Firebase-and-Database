@@ -807,10 +807,20 @@ async function startElevenLabsVoiceSession() {
     setVoiceState("connecting");
     await setupVoiceMicrophoneStream();
 
+    const liveRecordsSummary = getLoadedRecordsSummary();
+    const rows = recordsBody.querySelectorAll("tr");
+    let recordCount = 0;
+    rows.forEach((r) => { if (r.dataset.record) recordCount++; });
+
     console.log(`[ElevenLabs] Initiating session with Agent ID: ${ELEVENLABS_AGENT_ID}`);
 
     activeVoiceSession = await Conversation.startSession({
       agentId: ELEVENLABS_AGENT_ID,
+      dynamicVariables: {
+        student_records_summary: liveRecordsSummary,
+        total_student_records: String(recordCount),
+        current_user: currentUser ? currentUser.email : "Guest Student",
+      },
       onConnect: ({ conversationId }) => {
         console.log(`[ElevenLabs] Session connected! ID: ${conversationId}`);
         setVoiceState("listening");
@@ -984,6 +994,16 @@ async function sendChatMessage() {
 
     const data = await response.json();
     removeTypingIndicator(loadingId);
+
+    // If server returned a generic knowledge-base refusal for a local records query, use exact local summary
+    if (
+      data.textResponse &&
+      (data.textResponse.toLowerCase().includes("standard knowledge base") ||
+       data.textResponse.toLowerCase().includes("specific number of student records") ||
+       data.textResponse.toLowerCase().includes("don't have access to the specific"))
+    ) {
+      data.textResponse = generateClientSideResponse(text, studentContext);
+    }
 
     // Display Bot response
     appendChatMessage("bot", data.textResponse, detectedStudent);
