@@ -1025,8 +1025,40 @@ async function sendChatMessage() {
   // Check for student data entities in user input for quick auto-fill offer
   const detectedStudent = parseStudentEntitiesFromText(text);
 
+  // Detect "add/create/save/insert" intent
+  const addIntentPattern = /\b(add|create|save|insert|register|enroll)\b/i;
+  const hasAddIntent = addIntentPattern.test(text);
+
   // Prepare Live Student Records Context
   const studentContext = getLoadedRecordsSummary();
+
+  // ── AUTO-SAVE SHORTCUT ──────────────────────────────────────────────────
+  // If the user clearly wants to add a student AND we have all required fields,
+  // skip the button — save directly and confirm, then show the AI response.
+  const requiredFields = ["fullName", "studentID", "programme", "year", "email", "favouriteTechnology"];
+  const hasAllFields = detectedStudent && requiredFields.every((f) => detectedStudent[f]);
+
+  if (hasAddIntent && hasAllFields) {
+    removeTypingIndicator(loadingId);
+    const savedId = await saveStudentRecordDirectly(detectedStudent);
+    if (savedId) {
+      appendChatMessage(
+        "bot",
+        `✅ Done! I detected all the required details and saved the student record directly to your directory.\n\n` +
+        `• **Name:** ${detectedStudent.fullName}\n` +
+        `• **Student ID:** ${detectedStudent.studentID}\n` +
+        `• **Programme:** ${detectedStudent.programme}\n` +
+        `• **Year:** ${detectedStudent.year}\n` +
+        `• **Email:** ${detectedStudent.email}\n` +
+        `• **Favourite Tech:** ${detectedStudent.favouriteTechnology}` +
+        (detectedStudent.portfolioLink ? `\n• **Portfolio:** ${detectedStudent.portfolioLink}` : "") +
+        `\n\nThe records table below has been refreshed. ✔️`
+      );
+    }
+    // saveStudentRecordDirectly already shows an error/missing-fields message if it fails
+    return;
+  }
+  // ────────────────────────────────────────────────────────────────────────
 
   try {
     const backendUrl = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
@@ -1058,6 +1090,15 @@ async function sendChatMessage() {
        data.textResponse.toLowerCase().includes("don't have access to the specific"))
     ) {
       data.textResponse = generateClientSideResponse(text, studentContext);
+    }
+
+    // Intercept any fake "I have added / successfully saved" confirmations from the AI
+    // (the AI cannot write to Firestore — replace with an honest action card response)
+    const fakeConfirmPattern = /\b(i have (successfully |)added|i have (successfully |)saved|i have (successfully |)created|successfully (added|saved|created|inserted)|i('ve| have) (added|saved|created))\b/i;
+    if (fakeConfirmPattern.test(data.textResponse)) {
+      data.textResponse =
+        "I detected the student details in your message. Please use the **⚡ Save to Database** button below to actually save the record — I can read your records, but only the browser's JavaScript can write to Firestore." +
+        (detectedStudent ? "" : " Provide full student details (name, ID, programme, year, email, favourite technology) and I'll show the save button.");
     }
 
     // Display Bot response
