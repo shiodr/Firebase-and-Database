@@ -821,6 +821,61 @@ async function startElevenLabsVoiceSession() {
         total_student_records: String(recordCount),
         current_user: currentUser ? currentUser.email : "Guest Student",
       },
+      // Client Tools: executed on this browser when the ElevenLabs agent calls them
+      clientTools: {
+        /**
+         * Tool: add_student_record
+         * Called by the agent to save a new student directly to Firestore.
+         * Parameters (all strings from the agent):
+         *   fullName, studentID, programme, year, email, favouriteTechnology, portfolioLink (optional)
+         */
+        add_student_record: async (params) => {
+          console.log("[ElevenLabs clientTool] add_student_record called:", params);
+          const studentData = {
+            fullName: params.fullName || params.full_name || "",
+            studentID: params.studentID || params.student_id || "",
+            programme: params.programme || params.program || "",
+            year: Number(params.year) || 1,
+            email: params.email || "",
+            favouriteTechnology: params.favouriteTechnology || params.favourite_technology || params.technology || "",
+            portfolioLink: params.portfolioLink || params.portfolio_link || "",
+          };
+          appendVoiceTranscript("agent", `🎙️ Attempting to save: ${studentData.fullName || "student"}...`);
+          const savedId = await saveStudentRecordDirectly(studentData);
+          if (savedId) {
+            appendVoiceTranscript("agent", `✅ Saved ${studentData.fullName} to the database (ID: ${savedId.substring(0, 8)}...).`);
+            return { success: true, documentId: savedId, message: `Student ${studentData.fullName} added successfully.` };
+          } else {
+            return { success: false, message: "Save failed. Missing required fields or not logged in." };
+          }
+        },
+
+        /**
+         * Tool: populate_student_form
+         * Called by the agent to pre-fill the Add Student form for review.
+         */
+        populate_student_form: async (params) => {
+          console.log("[ElevenLabs clientTool] populate_student_form called:", params);
+          const studentData = {
+            fullName: params.fullName || params.full_name || "",
+            studentID: params.studentID || params.student_id || "",
+            programme: params.programme || params.program || "",
+            year: Number(params.year) || 1,
+            email: params.email || "",
+            favouriteTechnology: params.favouriteTechnology || params.favourite_technology || params.technology || "",
+            portfolioLink: params.portfolioLink || params.portfolio_link || "",
+          };
+          populateStudentForm(studentData);
+          appendVoiceTranscript("agent", `📝 Form populated for ${studentData.fullName || "student"}. Please review the form and click Add Record.`);
+          const fullNameEl = document.getElementById("full-name");
+          if (fullNameEl) {
+            fullNameEl.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+          // Switch back to chat mode so user can see the form
+          switchWidgetMode("chat");
+          return { success: true, message: "Form populated. User can review and submit." };
+        },
+      },
       onConnect: ({ conversationId }) => {
         console.log(`[ElevenLabs] Session connected! ID: ${conversationId}`);
         setVoiceState("listening");
@@ -1022,6 +1077,53 @@ async function sendChatMessage() {
 }
 
 /**
+ * Saves a student record directly to Firestore without requiring form interaction.
+ * Used by the ⚡ Save to Database button and ElevenLabs clientTool add_student_record.
+ * @param {Object} studentData - Parsed student fields
+ * @returns {string|null} Firestore document ID if successful, null otherwise
+ */
+async function saveStudentRecordDirectly(studentData) {
+  if (!currentUser) {
+    appendChatMessage("bot", "⚠️ You must be **logged in** to save records. Please sign in first.");
+    return null;
+  }
+
+  const required = ["fullName", "studentID", "programme", "year", "email", "favouriteTechnology"];
+  const missing = required.filter((f) => !studentData[f]);
+
+  if (missing.length > 0) {
+    const missingLabels = {
+      fullName: "Full Name", studentID: "Student ID", programme: "Programme",
+      year: "Year", email: "Email", favouriteTechnology: "Favourite Technology",
+    };
+    const missingNames = missing.map((f) => missingLabels[f] || f).join(", ");
+    appendChatMessage("bot", `⚠️ Cannot save directly — the following required fields are missing: **${missingNames}**.\n\nTry using **📝 Populate Add Form** to fill in the remaining details manually, then submit the form.`);
+    return null;
+  }
+
+  try {
+    const docRef = await addDoc(collection(db, "students"), {
+      fullName: studentData.fullName.trim(),
+      studentID: studentData.studentID.trim(),
+      programme: studentData.programme.trim(),
+      year: Number(studentData.year),
+      email: studentData.email.trim(),
+      favouriteTechnology: studentData.favouriteTechnology.trim(),
+      portfolioLink: studentData.portfolioLink ? normalizePortfolioLink(studentData.portfolioLink) : "",
+      ownerId: currentUser.uid,
+      createdAt: serverTimestamp(),
+    });
+    console.log("[RAGbot] Direct save successful:", docRef.id);
+    await loadRecords();
+    return docRef.id;
+  } catch (error) {
+    console.error("[RAGbot] Direct save failed:", error);
+    appendChatMessage("bot", `❌ Failed to save record: ${error.message || "Unknown error"}. Please try again or use the form.`);
+    return null;
+  }
+}
+
+/**
  * Appends a chat bubble to the UI with formatted content and action buttons.
  */
 function appendChatMessage(sender, text, detectedStudent = null) {
@@ -1045,9 +1147,14 @@ function appendChatMessage(sender, text, detectedStudent = null) {
           ${detectedStudent.favouriteTechnology ? `<strong>Favourite Tech:</strong> ${escapeHTML(detectedStudent.favouriteTechnology)}<br>` : ""}
           ${detectedStudent.portfolioLink ? `<strong>Portfolio:</strong> ${escapeHTML(detectedStudent.portfolioLink)}` : ""}
         </div>
-        <button type="button" class="btn btn-primary student-action-btn" data-autofill='${escapeHTML(JSON.stringify(detectedStudent))}'>
-          Populate Add Form &#8594;
-        </button>
+        <div class="student-action-btn-group">
+          <button type="button" class="btn btn-primary student-action-btn" data-autofill='${escapeHTML(JSON.stringify(detectedStudent))}'>
+            &#128221; Populate Add Form
+          </button>
+          <button type="button" class="btn student-direct-add-btn" data-directsave='${escapeHTML(JSON.stringify(detectedStudent))}'>
+            &#9889; Save to Database
+          </button>
+        </div>
       </div>
     `;
   }
@@ -1085,6 +1192,35 @@ function appendChatMessage(sender, text, detectedStudent = null) {
         }
       } catch (err) {
         console.error("Auto-fill error:", err);
+      }
+    });
+  }
+
+  // Attach click handler for direct database save button
+  const directSaveBtn = msgEl.querySelector(".student-direct-add-btn");
+  if (directSaveBtn) {
+    directSaveBtn.addEventListener("click", async () => {
+      try {
+        const studentData = directSaveBtn.dataset.directsave
+          ? JSON.parse(directSaveBtn.dataset.directsave)
+          : detectedStudent;
+
+        directSaveBtn.disabled = true;
+        directSaveBtn.textContent = "Saving...";
+
+        const savedId = await saveStudentRecordDirectly(studentData);
+        if (savedId) {
+          directSaveBtn.textContent = "✅ Saved!";
+          directSaveBtn.classList.add("saved");
+          appendChatMessage("bot", `✅ Student record **${studentData.fullName || "record"}** saved directly to the database! The records table has been refreshed.`);
+        } else {
+          directSaveBtn.disabled = false;
+          directSaveBtn.textContent = "⚡ Save to Database";
+        }
+      } catch (err) {
+        console.error("Direct save error:", err);
+        directSaveBtn.disabled = false;
+        directSaveBtn.textContent = "⚡ Save to Database";
       }
     });
   }
