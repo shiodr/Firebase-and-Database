@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <meta name="theme-color" content="#a6192e" />
-      <title>University of Batangas | Student Records</title>
+    <meta name="theme-color" content="#a6192e" />
+    <title>University of Batangas | Student Records</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet" />
@@ -119,7 +119,63 @@
       </section>
     </main>
 
+    <!-- =========================================
+         AI VOICE CHATBOT WIDGET
+         ========================================== -->
+    <button id="open-chat-btn" class="floating-chat-btn" aria-label="Open AI Assistant" aria-expanded="false">
+      <span class="chat-btn-pulse" aria-hidden="true"></span>
+      <span class="chat-btn-icon" aria-hidden="true">&#128172;</span>
+      <span class="chat-btn-text">Ask Assistant</span>
+    </button>
+
+    <div id="chat-widget" class="chat-widget hidden" role="region" aria-label="Student Records AI Assistant">
+      <div class="chat-header">
+        <div class="chat-header-info">
+          <div class="chat-avatar" aria-hidden="true">
+            <span></span><span></span>
+          </div>
+          <div>
+            <h3>Academic Assistant</h3>
+            <span class="chat-status"><i aria-hidden="true"></i> Online &middot; UB Lipa</span>
+          </div>
+        </div>
+        <div class="chat-header-controls">
+          <label class="voice-toggle-label" title="Toggle voice audio narration">
+            <input type="checkbox" id="voice-toggle" checked />
+            <span class="voice-pill"><span class="voice-icon" aria-hidden="true">&#128266;</span> Voice</span>
+          </label>
+          <button id="close-chat-btn" class="chat-close-btn" aria-label="Close assistant window">&times;</button>
+        </div>
+      </div>
+
+      <div class="chat-chips" id="chat-chips">
+        <button type="button" class="chip" data-prompt="How many student records do I have?">&#128202; Total records</button>
+        <button type="button" class="chip" data-prompt="Add student: Maria Santos, ID 2026-0042, BSIT, Year 3, maria@ub.edu.ph, Flutter, github.com/mariasantos">&#128221; Auto-fill sample</button>
+        <button type="button" class="chip" data-prompt="Explain how CRUD and data isolation work in this system.">&#128218; Explain CRUD</button>
+        <button type="button" class="chip" data-prompt="Show me all students who like JavaScript or Python.">&#128269; Find by tech</button>
+      </div>
+
+      <div id="chat-messages" class="chat-messages" aria-live="polite">
+        <div class="chat-message bot">
+          <div class="msg-content">
+            Hello! I am your <strong>University of Batangas Academic Assistant</strong>. I can help answer questions about your records, explain CRUD operations, or auto-fill new student entries.
+          </div>
+          <span class="msg-time">Just now</span>
+        </div>
+      </div>
+
+      <form id="chat-form" class="chat-input-area">
+        <input type="text" id="chat-input" placeholder="Ask anything or paste student bio..." autocomplete="off" aria-label="Message to AI assistant" />
+        <button type="submit" id="send-chat-btn" class="btn btn-primary chat-send-btn" aria-label="Send message">
+          <span>&#10148;</span>
+        </button>
+      </form>
+
+      <!-- Audio Element for ElevenLabs & Voice Playback -->
+      <audio id="tts-audio" style="display: none;"></audio>
+    </div>
+
     <footer><p>Student Records Management System <span aria-hidden="true">&middot;</span> Private by design</p></footer>
-    <script type="module" src="app.js?v=3"></script>
+    <script type="module" src="app.js?v=4"></script>
   </body>
 </html>
