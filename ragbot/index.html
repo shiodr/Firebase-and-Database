@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UniGuide AI | Campus Knowledge RAGbot</title>
+  
+  <!-- Modern Font from Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Ambient background glow elements -->
+  <div class="ambient-glow glow-1" aria-hidden="true"></div>
+  <div class="ambient-glow glow-2" aria-hidden="true"></div>
+
+  <div class="app-container">
+    <!-- Header Section -->
+    <header class="app-header">
+      <div class="header-branding">
+        <div class="brand-badge">
+          <span class="badge-icon">⚡</span>
+          <span class="badge-text">RAG-Augmented Voice Agent</span>
+        </div>
+        <h1 class="brand-title">UniGuide <span>AI</span></h1>
+        <p class="brand-subtitle">
+          Your interactive voice guide grounded in official university regulations, academic schedules, and campus resources.
+        </p>
+      </div>
+
+      <!-- Live Connection & State Pill -->
+      <div class="header-status-card">
+        <div class="status-indicator">
+          <span id="status-dot" class="status-dot disconnected"></span>
+          <span id="status-text" class="status-label">Disconnected</span>
+        </div>
+        <span class="engine-tag">ElevenLabs ConvAI</span>
+      </div>
+    </header>
+
+    <!-- Main Workspace Grid: Interactive Voice Console + RAG Knowledge Base Sidebar -->
+    <main class="main-layout">
+      <!-- Voice & Chat Interface (Main Interactive Element) -->
+      <section class="voice-console-card">
+        <!-- Interactive Call Orb Container -->
+        <div class="call-stage">
+          <div id="orb-wrapper" class="orb-wrapper state-disconnected">
+            <!-- Animated acoustic ring layers -->
+            <div class="pulse-ring ring-1"></div>
+            <div class="pulse-ring ring-2"></div>
+            <div class="pulse-ring ring-3"></div>
+
+            <!-- Central Microphone / Interactive Trigger Orb -->
+            <button 
+              id="mic-orb-btn" 
+              class="mic-orb-button" 
+              aria-label="Start Voice Conversation"
+              title="Click to start voice session"
+            >
+              <svg id="mic-icon" class="orb-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                <line x1="12" y1="19" x2="12" y2="22"></line>
+              </svg>
+              <!-- Disconnect/Hangup icon (swapped dynamically) -->
+              <svg id="hangup-icon" class="orb-svg-icon hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"></path>
+                <line x1="22" y1="2" x2="2" y2="22"></line>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Live Visual Feedback State Subtext -->
+          <div class="feedback-container">
+            <h2 id="feedback-headline" class="feedback-headline">Ready to Connect</h2>
+            <p id="feedback-subtext" class="feedback-subtext">Click the microphone above to start talking with the campus RAGbot.</p>
+          </div>
+
+          <!-- Dynamic Audio Frequency Visualizer Bars -->
+          <div id="audio-visualizer" class="audio-visualizer idle">
+            <span class="vbar bar-1"></span>
+            <span class="vbar bar-2"></span>
+            <span class="vbar bar-3"></span>
+            <span class="vbar bar-4"></span>
+            <span class="vbar bar-5"></span>
+            <span class="vbar bar-6"></span>
+            <span class="vbar bar-7"></span>
+            <span class="vbar bar-8"></span>
+          </div>
+        </div>
+
+        <!-- Primary Session Controls -->
+        <div class="session-controls">
+          <button id="primary-action-btn" class="btn btn-primary">
+            <span class="btn-icon">🎙️</span>
+            <span id="primary-btn-label">Start Conversation</span>
+          </button>
+          
+          <button id="mute-btn" class="btn btn-secondary" disabled title="Mute/Unmute Microphone">
+            <span id="mute-icon">🎤</span>
+            <span id="mute-label">Mute</span>
+          </button>
+
+          <button id="clear-transcript-btn" class="btn btn-ghost" title="Clear chat stream">
+            <span>Clear Transcript</span>
+          </button>
+        </div>
+
+        <!-- Live Conversation Transcript -->
+        <div class="transcript-section">
+          <div class="transcript-header">
+            <div class="transcript-title">
+              <span class="transcript-dot"></span>
+              <h3>Live Session Transcript</h3>
+            </div>
+            <span id="message-count" class="badge">1 message</span>
+          </div>
+
+          <div id="transcript-stream" class="transcript-stream" role="log" aria-live="polite">
+            <!-- Initial Agent Greeting -->
+            <div class="chat-message agent">
+              <div class="avatar">🤖</div>
+              <div class="bubble">
+                <div class="message-meta">
+                  <span class="speaker-name">UniGuide AI</span>
+                  <span class="message-time">Just now</span>
+                </div>
+                <div class="message-body">
+                  Hello! I'm UniGuide, your voice assistant. I am linked to the university's knowledge base. You can ask me about academic deadlines, course prerequisites, financial aid, or campus facilities!
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Sidebar: RAG Knowledge Base & Grounding Info -->
+      <aside class="rag-sidebar">
+        <!-- Knowledge Grounding Overview Card -->
+        <div class="sidebar-card">
+          <div class="card-header">
+            <span class="header-icon">📚</span>
+            <div>
+              <h3>RAG Knowledge Base</h3>
+              <p>Grounding context linked to ElevenLabs</p>
+            </div>
+          </div>
+          <p class="card-description">
+            This agent retrieves answers from verified university documents to ensure zero hallucination on critical student matters:
+          </p>
+
+          <ul class="rag-topics-list">
+            <li class="topic-item">
+              <span class="topic-icon">🗓️</span>
+              <div class="topic-text">
+                <strong>Academic Calendar & Deadlines</strong>
+                <span>Add/drop periods, exam schedules, and tuition due dates.</span>
+              </div>
+            </li>
+            <li class="topic-item">
+              <span class="topic-icon">📖</span>
+              <div class="topic-text">
+                <strong>Curricula & Course Catalogs</strong>
+                <span>Degree requirements, credit requirements, and prerequisites.</span>
+              </div>
+            </li>
+            <li class="topic-item">
+              <span class="topic-icon">🏛️</span>
+              <div class="topic-text">
+                <strong>Campus Services & Facilities</strong>
+                <span>Library 24/7 access, IT helpdesk, counseling, and health clinic.</span>
+              </div>
+            </li>
+            <li class="topic-item">
+              <span class="topic-icon">💰</span>
+              <div class="topic-text">
+                <strong>Scholarships & Financial Aid</strong>
+                <span>FAFSA guides, merit grants, work-study eligibility, and stipends.</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Technical RAG Specs Box -->
+        <div class="sidebar-card rag-specs-box">
+          <h4>RAG Pipeline Architecture</h4>
+          <div class="specs-grid">
+            <div class="spec-item">
+              <span class="spec-label">Retrieval Mode</span>
+              <span class="spec-value">Hybrid (Dense + BM25)</span>
+            </div>
+            <div class="spec-item">
+              <span class="spec-label">Document Chunks</span>
+              <span class="spec-value">1,420 Vectors Indexed</span>
+            </div>
+            <div class="spec-item">
+              <span class="spec-label">Audio Protocol</span>
+              <span class="spec-value">WebRTC / WebSocket PCM</span>
+            </div>
+            <div class="spec-item">
+              <span class="spec-label">Latency Optimization</span>
+              <span class="spec-value">Ultra-Low (~450ms)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Sample Prompts ("Try Asking") -->
+        <div class="sidebar-card">
+          <div class="card-header">
+            <span class="header-icon">💡</span>
+            <div>
+              <h3>Try Asking</h3>
+              <p>Click any prompt to preview inquiry</p>
+            </div>
+          </div>
+          <div class="prompt-chips">
+            <button class="prompt-chip" type="button" data-prompt="What is the deadline to drop a class without penalty?">
+              "What is the deadline to drop a class without penalty?"
+            </button>
+            <button class="prompt-chip" type="button" data-prompt="Where is the 24/7 library quiet study area located?">
+              "Where is the 24/7 library study area located?"
+            </button>
+            <button class="prompt-chip" type="button" data-prompt="How do I qualify for the Dean's Honor scholarship?">
+              "How do I qualify for the Dean's Honor scholarship?"
+            </button>
+            <button class="prompt-chip" type="button" data-prompt="What are the prerequisite courses for Software Engineering?">
+              "What are the prerequisites for Software Engineering?"
+            </button>
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <p>Week 3 Project: Build a RAGbot Using ElevenLabs &bull; Web Audio API &bull; Client-Side Conversational Agent</p>
+    </footer>
+  </div>
+
+  <!-- Setup Alert Modal (Shown if AGENT_ID placeholder hasn't been replaced) -->
+  <dialog id="setup-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-badge">⚠️ Action Required</div>
+      <h2>ElevenLabs Agent ID Not Set</h2>
+      <p>
+        To run the voice conversation, you must replace the placeholder <code>AGENT_ID</code> inside <code>app.js</code> with your actual Agent ID from the ElevenLabs dashboard.
+      </p>
+      <ol class="modal-steps">
+        <li>Go to <strong>elevenlabs.io</strong> &rarr; <strong>Conversational AI</strong>.</li>
+        <li>Ensure your agent is set to <strong>Public</strong> under the agent settings.</li>
+        <li>Copy your <strong>Agent ID</strong> and paste it into line 14 of <code>app.js</code>.</li>
+      </ol>
+      <div class="modal-actions">
+        <button id="close-modal-btn" class="btn btn-primary" type="button">Understood</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Application Logic (ES Module) -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>

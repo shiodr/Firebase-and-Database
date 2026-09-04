@@ -140,40 +140,164 @@
           </div>
         </div>
         <div class="chat-header-controls">
-          <label class="voice-toggle-label" title="Toggle voice audio narration">
-            <input type="checkbox" id="voice-toggle" checked />
-            <span class="voice-pill"><span class="voice-icon" aria-hidden="true">&#128266;</span> Voice</span>
-          </label>
+          <button type="button" id="voice-toggle-btn" class="voice-pill" aria-label="Toggle ElevenLabs Voice Mode" title="Switch between Text Chat and ElevenLabs Voice Call">
+            <span class="voice-icon" aria-hidden="true">&#127908;</span>
+            <span id="voice-pill-text">Voice Mode</span>
+          </button>
           <button id="close-chat-btn" class="chat-close-btn" aria-label="Close assistant window">&times;</button>
         </div>
       </div>
 
-      <div class="chat-chips" id="chat-chips">
-        <button type="button" class="chip" data-prompt="How many student records do I have?">&#128202; Total records</button>
-        <button type="button" class="chip" data-prompt="Add student: Maria Santos, ID 2026-0042, BSIT, Year 3, maria@ub.edu.ph, Flutter, github.com/mariasantos">&#128221; Auto-fill sample</button>
-        <button type="button" class="chip" data-prompt="Explain how CRUD and data isolation work in this system.">&#128218; Explain CRUD</button>
-        <button type="button" class="chip" data-prompt="Show me all students who like JavaScript or Python.">&#128269; Find by tech</button>
+      <!-- Mode Switcher Tabs -->
+      <div class="widget-tabs" role="tablist">
+        <button type="button" id="tab-chat-btn" class="widget-tab active" role="tab" aria-selected="true" aria-controls="chat-view-container">
+          <span>💬 Text Chat</span>
+        </button>
+        <button type="button" id="tab-voice-btn" class="widget-tab" role="tab" aria-selected="false" aria-controls="voice-view-container">
+          <span>🎙️ Voice RAGbot</span>
+          <span class="tab-badge">ElevenLabs</span>
+        </button>
       </div>
 
-      <div id="chat-messages" class="chat-messages" aria-live="polite">
-        <div class="chat-message bot">
-          <div class="msg-content">
-            Hello! I am your <strong>University of Batangas Academic Assistant</strong>. I can help answer questions about your records, explain CRUD operations, or auto-fill new student entries.
+      <!-- VIEW 1: Text Chat View -->
+      <div id="chat-view-container" class="widget-view">
+        <div class="voice-call-cta">
+          <span>⚡ Prefer talking aloud?</span>
+          <button type="button" id="quick-voice-btn" class="btn-voice-link">Open ElevenLabs Voice Call &rarr;</button>
+        </div>
+
+        <div class="chat-chips" id="chat-chips">
+          <button type="button" class="chip" data-prompt="How many student records do I have?">&#128202; Total records</button>
+          <button type="button" class="chip" data-prompt="Add student: Maria Santos, ID 2026-0042, BSIT, Year 3, maria@ub.edu.ph, Flutter, github.com/mariasantos">&#128221; Auto-fill sample</button>
+          <button type="button" class="chip" data-prompt="Explain how CRUD and data isolation work in this system.">&#128218; Explain CRUD</button>
+          <button type="button" class="chip" data-prompt="Show me all students who like JavaScript or Python.">&#128269; Find by tech</button>
+        </div>
+
+        <div id="chat-messages" class="chat-messages" aria-live="polite">
+          <div class="chat-message bot">
+            <div class="msg-content">
+              Hello! I am your <strong>University of Batangas Academic Assistant</strong>. I can help answer questions about your records, explain CRUD operations, or auto-fill new student entries.
+            </div>
+            <span class="msg-time">Just now</span>
           </div>
-          <span class="msg-time">Just now</span>
+        </div>
+
+        <form id="chat-form" class="chat-input-area">
+          <input type="text" id="chat-input" placeholder="Ask anything or paste student bio..." autocomplete="off" aria-label="Message to AI assistant" />
+          <button type="submit" id="send-chat-btn" class="btn btn-primary chat-send-btn" aria-label="Send message">
+            <span>&#10148;</span>
+          </button>
+        </form>
+      </div>
+
+      <!-- VIEW 2: ElevenLabs Conversational AI Voice Mode (The Rubric Centerpiece) -->
+      <div id="voice-view-container" class="widget-view hidden">
+        <!-- Visual State Feedback Banner -->
+        <div class="voice-state-banner">
+          <div class="voice-status-indicator">
+            <span id="voice-status-dot" class="status-dot disconnected"></span>
+            <span id="voice-status-text" class="status-label">Disconnected</span>
+          </div>
+          <span class="rag-sync-tag">RAG Grounded &bull; ConvAI</span>
+        </div>
+
+        <!-- Call Stage with Concentric Pulse Rings & Orb Button -->
+        <div class="voice-call-stage">
+          <div id="voice-orb-wrapper" class="orb-wrapper state-disconnected">
+            <div class="pulse-ring ring-1"></div>
+            <div class="pulse-ring ring-2"></div>
+            <div class="pulse-ring ring-3"></div>
+
+            <button id="voice-mic-orb" class="mic-orb-button" aria-label="Start Voice Call" title="Click to start voice session">
+              <svg id="voice-mic-svg" class="orb-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                <line x1="12" y1="19" x2="12" y2="22"></line>
+              </svg>
+              <svg id="voice-hangup-svg" class="orb-svg-icon hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"></path>
+                <line x1="22" y1="2" x2="2" y2="22"></line>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Dynamic Feedback Text -->
+          <div class="voice-feedback">
+            <h4 id="voice-feedback-title">Ready to Connect</h4>
+            <p id="voice-feedback-subtitle">Tap the microphone to speak with your Academic Assistant.</p>
+          </div>
+
+          <!-- Dynamic Frequency Visualizer Bars -->
+          <div id="voice-audio-bars" class="audio-visualizer idle">
+            <span class="vbar bar-1"></span>
+            <span class="vbar bar-2"></span>
+            <span class="vbar bar-3"></span>
+            <span class="vbar bar-4"></span>
+            <span class="vbar bar-5"></span>
+            <span class="vbar bar-6"></span>
+            <span class="vbar bar-7"></span>
+          </div>
+
+          <!-- Voice Action Controls -->
+          <div class="voice-actions">
+            <button type="button" id="voice-primary-btn" class="btn btn-primary">
+              <span>🎙️</span>
+              <span id="voice-primary-label">Start Voice Session</span>
+            </button>
+            <button type="button" id="voice-mute-btn" class="btn btn-secondary" disabled>
+              <span id="voice-mute-label">Mute</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- RAG Knowledge Base Grounding Info (Rubric Requirement) -->
+        <details class="rag-info-box" open>
+          <summary><strong>🧠 What This RAGbot Knows</strong></summary>
+          <div class="rag-info-content">
+            <p class="rag-desc">Grounded in verified University of Batangas data & your Firestore collection:</p>
+            <ul class="rag-points">
+              <li>📋 <strong>Student Directory</strong>: Queries live loaded records, student counts, and technologies.</li>
+              <li>🔒 <strong>Data Isolation</strong>: Explains CRUD rules & private ownership per UID.</li>
+              <li>🏛️ <strong>UB Guidelines</strong>: Grading rubrics, BSIT curricula, and deadlines.</li>
+            </ul>
+            <div class="voice-prompt-chips">
+              <button type="button" class="voice-chip" data-speak="How many student records do I have?">"How many records do I have?"</button>
+              <button type="button" class="voice-chip" data-speak="Explain how CRUD and data isolation work.">"Explain CRUD & isolation"</button>
+            </div>
+          </div>
+        </details>
+
+        <!-- Live Spoken Transcript Feed -->
+        <div class="voice-transcript-wrapper">
+          <div class="voice-transcript-title">Live Spoken Transcript</div>
+          <div id="voice-transcript-stream" class="voice-transcript-stream" role="log" aria-live="polite">
+            <div class="transcript-line agent">
+              <strong>Agent:</strong> Click "Start Voice Session" to speak. I will transcribe our conversation live!
+            </div>
+          </div>
         </div>
       </div>
 
-      <form id="chat-form" class="chat-input-area">
-        <input type="text" id="chat-input" placeholder="Ask anything or paste student bio..." autocomplete="off" aria-label="Message to AI assistant" />
-        <button type="submit" id="send-chat-btn" class="btn btn-primary chat-send-btn" aria-label="Send message">
-          <span>&#10148;</span>
-        </button>
-      </form>
-
-      <!-- Audio Element for ElevenLabs & Voice Playback -->
+      <!-- Audio Element for Voice Playback -->
       <audio id="tts-audio" style="display: none;"></audio>
     </div>
+
+    <!-- Agent ID Setup Alert Modal -->
+    <dialog id="agent-setup-modal" class="setup-modal">
+      <div class="setup-modal-card">
+        <span class="setup-badge">⚡ Action Required</span>
+        <h3>Connect Your ElevenLabs Agent</h3>
+        <p>To enable real-time conversational voice, paste your <strong>Agent ID</strong> into <code>app.js</code>:</p>
+        <ol class="setup-steps">
+          <li>Visit <strong>elevenlabs.io</strong> &rarr; <strong>Conversational AI</strong>.</li>
+          <li>Set Agent to <strong>Public</strong> under the agent settings.</li>
+          <li>Copy your <strong>Agent ID</strong> and paste into <code>app.js</code> (line 502):
+            <code>const ELEVENLABS_AGENT_ID = "...";</code>
+          </li>
+        </ol>
+        <button type="button" id="close-setup-modal-btn" class="btn btn-primary">Got it!</button>
+      </div>
+    </dialog>
 
     <footer><p>Student Records Management System <span aria-hidden="true">&middot;</span> Private by design</p></footer>
     <script type="module" src="app.js?v=4"></script>

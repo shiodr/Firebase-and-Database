@@ -1,4 +1,5 @@
 import { auth, db } from "./firebase-config.js";
+import { Conversation } from "https://cdn.jsdelivr.net/npm/@elevenlabs/client@latest/+esm";
 
 import {
   createUserWithEmailAndPassword,
@@ -117,13 +118,18 @@ function getStudentFormData() {
 }
 
 function populateStudentForm(data) {
-  document.getElementById("full-name").value = data.fullName || "";
-  document.getElementById("student-id").value = data.studentID || "";
-  document.getElementById("programme").value = data.programme || "";
-  document.getElementById("year").value = data.year || "";
-  document.getElementById("student-email").value = data.email || "";
-  document.getElementById("favourite-technology").value = data.favouriteTechnology || "";
-  document.getElementById("portfolio-link").value = data.portfolioLink || "";
+  if (!data) return;
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val !== undefined && val !== null ? val : "";
+  };
+  setVal("full-name", data.fullName);
+  setVal("student-id", data.studentID);
+  setVal("programme", data.programme);
+  setVal("year", data.year);
+  setVal("student-email", data.email);
+  setVal("favourite-technology", data.favouriteTechnology);
+  setVal("portfolio-link", data.portfolioLink);
 }
 
 function renderPortfolioLink(value) {
@@ -487,17 +493,69 @@ function escapeHTML(value) {
 }
 
 // =========================================
-// AI VOICE CHATBOT SYSTEM CONTROLLER
+// ELEVENLABS CONVERSATIONAL AI RAGBOT CONTROLLER
+// Week 3 Project: Build a RAGbot Using ElevenLabs
 // =========================================
+
+/**
+ * -------------------------------------------------------------------------
+ * 1. ELEVENLABS AGENT CONFIGURATION
+ * Replace the placeholder below with your Agent ID from the ElevenLabs Dashboard.
+ * Location: ElevenLabs Dashboard -> Conversational AI -> Your Agent -> Copy Agent ID
+ * -------------------------------------------------------------------------
+ */
+const ELEVENLABS_AGENT_ID = "agent_2001m1pjp56ve6gb66qvq3gp4rw8";
+
+// ElevenLabs Voice Session State
+let activeVoiceSession = null;
+let voiceMediaStream = null;
+let voiceAudioContext = null;
+let voiceAnalyserNode = null;
+let voiceAnimationFrameId = null;
+let isVoiceMuted = false;
+
+// DOM Elements: Chat & Voice Widget
 const chatWidget = document.getElementById("chat-widget");
 const openChatBtn = document.getElementById("open-chat-btn");
 const closeChatBtn = document.getElementById("close-chat-btn");
+const voiceToggleBtn = document.getElementById("voice-toggle-btn");
+const voicePillText = document.getElementById("voice-pill-text");
+
+// Tabs & Views
+const tabChatBtn = document.getElementById("tab-chat-btn");
+const tabVoiceBtn = document.getElementById("tab-voice-btn");
+const chatViewContainer = document.getElementById("chat-view-container");
+const voiceViewContainer = document.getElementById("voice-view-container");
+const quickVoiceBtn = document.getElementById("quick-voice-btn");
+
+// Text Chat DOM Elements
 const chatMessages = document.getElementById("chat-messages");
 const chatForm = document.getElementById("chat-form");
 const chatInput = document.getElementById("chat-input");
-const voiceToggle = document.getElementById("voice-toggle");
-const ttsAudio = document.getElementById("tts-audio");
 const chatChips = document.getElementById("chat-chips");
+const ttsAudio = document.getElementById("tts-audio");
+
+// Voice Mode DOM Elements
+const voiceStatusDot = document.getElementById("voice-status-dot");
+const voiceStatusText = document.getElementById("voice-status-text");
+const voiceOrbWrapper = document.getElementById("voice-orb-wrapper");
+const voiceMicOrb = document.getElementById("voice-mic-orb");
+const voiceMicSvg = document.getElementById("voice-mic-svg");
+const voiceHangupSvg = document.getElementById("voice-hangup-svg");
+const voiceFeedbackTitle = document.getElementById("voice-feedback-title");
+const voiceFeedbackSubtitle = document.getElementById("voice-feedback-subtitle");
+const voiceAudioBars = document.getElementById("voice-audio-bars");
+const voiceVisualizerBars = document.querySelectorAll("#voice-audio-bars .vbar");
+const voicePrimaryBtn = document.getElementById("voice-primary-btn");
+const voicePrimaryLabel = document.getElementById("voice-primary-label");
+const voiceMuteBtn = document.getElementById("voice-mute-btn");
+const voiceMuteLabel = document.getElementById("voice-mute-label");
+const voiceTranscriptStream = document.getElementById("voice-transcript-stream");
+const voicePromptChips = document.querySelectorAll(".voice-chip");
+
+// Setup Modal
+const agentSetupModal = document.getElementById("agent-setup-modal");
+const closeSetupModalBtn = document.getElementById("close-setup-modal-btn");
 
 // Open & Close Window
 if (openChatBtn && chatWidget) {
@@ -513,10 +571,359 @@ if (closeChatBtn && chatWidget) {
     chatWidget.classList.add("hidden");
     openChatBtn?.setAttribute("aria-expanded", "false");
     stopAllAudio();
+    endElevenLabsVoiceSession();
   });
 }
 
-// Quick Prompt Chips
+// Mode Switching (Tabs & Toggle Button)
+function switchWidgetMode(mode) {
+  if (mode === "voice") {
+    tabVoiceBtn?.classList.add("active");
+    tabChatBtn?.classList.remove("active");
+    tabVoiceBtn?.setAttribute("aria-selected", "true");
+    tabChatBtn?.setAttribute("aria-selected", "false");
+    voiceViewContainer?.classList.remove("hidden");
+    chatViewContainer?.classList.add("hidden");
+    if (voicePillText) voicePillText.textContent = "Chat Mode";
+  } else {
+    tabChatBtn?.classList.add("active");
+    tabVoiceBtn?.classList.remove("active");
+    tabChatBtn?.setAttribute("aria-selected", "true");
+    tabVoiceBtn?.setAttribute("aria-selected", "false");
+    chatViewContainer?.classList.remove("hidden");
+    voiceViewContainer?.classList.add("hidden");
+    if (voicePillText) voicePillText.textContent = "Voice Mode";
+  }
+}
+
+if (tabChatBtn) {
+  tabChatBtn.addEventListener("click", () => switchWidgetMode("chat"));
+}
+
+if (tabVoiceBtn) {
+  tabVoiceBtn.addEventListener("click", () => switchWidgetMode("voice"));
+}
+
+if (quickVoiceBtn) {
+  quickVoiceBtn.addEventListener("click", () => {
+    switchWidgetMode("voice");
+  });
+}
+
+if (voiceToggleBtn) {
+  voiceToggleBtn.addEventListener("click", () => {
+    const isVoiceActive = tabVoiceBtn?.classList.contains("active");
+    switchWidgetMode(isVoiceActive ? "chat" : "voice");
+  });
+}
+
+// Setup Modal Close Handler
+if (closeSetupModalBtn && agentSetupModal) {
+  closeSetupModalBtn.addEventListener("click", () => {
+    agentSetupModal.close();
+  });
+}
+
+// Voice Suggestion Chips
+if (voicePromptChips) {
+  voicePromptChips.forEach((chip) => {
+    chip.addEventListener("click", () => {
+      const prompt = chip.getAttribute("data-speak");
+      if (prompt) {
+        if (activeVoiceSession) {
+          alert(`Say this aloud into your microphone:\n\n"${prompt}"`);
+        } else {
+          alert(`Click "Start Voice Session" and speak this aloud:\n\n"${prompt}"`);
+        }
+      }
+    });
+  });
+}
+
+// =========================================================================
+// ELEVENLABS CONVERSATIONAL AI STATE MACHINE
+// Visual Feedback States: "disconnected", "connecting", "listening", "speaking"
+// =========================================================================
+function setVoiceState(state) {
+  console.log(`[ElevenLabs State] -> ${state.toUpperCase()}`);
+
+  voiceOrbWrapper?.classList.remove("state-disconnected", "state-connecting", "state-listening", "state-speaking");
+  voiceStatusDot?.classList.remove("disconnected", "connecting", "listening", "speaking");
+  voiceAudioBars?.classList.remove("idle", "listening", "speaking");
+
+  voiceOrbWrapper?.classList.add(`state-${state}`);
+  voiceStatusDot?.classList.add(state);
+
+  switch (state) {
+    case "disconnected":
+      if (voiceStatusText) voiceStatusText.textContent = "Disconnected";
+      if (voiceFeedbackTitle) voiceFeedbackTitle.textContent = "Ready to Connect";
+      if (voiceFeedbackSubtitle) voiceFeedbackSubtitle.textContent = "Tap the microphone to speak with your Academic Assistant.";
+      voiceMicSvg?.classList.remove("hidden");
+      voiceHangupSvg?.classList.add("hidden");
+      if (voicePrimaryBtn) {
+        voicePrimaryBtn.classList.remove("btn-danger");
+        voicePrimaryBtn.classList.add("btn-primary");
+        voicePrimaryBtn.disabled = false;
+      }
+      if (voicePrimaryLabel) voicePrimaryLabel.textContent = "Start Voice Session";
+      if (voiceMicOrb) voiceMicOrb.disabled = false;
+      if (voiceMuteBtn) voiceMuteBtn.disabled = true;
+      voiceAudioBars?.classList.add("idle");
+      stopVoiceAudioVisualizer();
+      break;
+
+    case "connecting":
+      if (voiceStatusText) voiceStatusText.textContent = "Connecting...";
+      if (voiceFeedbackTitle) voiceFeedbackTitle.textContent = "Establishing Connection...";
+      if (voiceFeedbackSubtitle) voiceFeedbackSubtitle.textContent = "Initializing secure WebRTC audio channel with ElevenLabs Agent...";
+      if (voicePrimaryBtn) voicePrimaryBtn.disabled = true;
+      if (voiceMicOrb) voiceMicOrb.disabled = true;
+      if (voiceMuteBtn) voiceMuteBtn.disabled = true;
+      break;
+
+    case "listening":
+      if (voiceStatusText) voiceStatusText.textContent = "Listening...";
+      if (voiceFeedbackTitle) voiceFeedbackTitle.textContent = "Listening to You";
+      if (voiceFeedbackSubtitle) voiceFeedbackSubtitle.textContent = "Speak clearly—ask about records, CRUD, or UB policies...";
+      voiceMicSvg?.classList.add("hidden");
+      voiceHangupSvg?.classList.remove("hidden");
+      if (voicePrimaryBtn) {
+        voicePrimaryBtn.classList.remove("btn-primary");
+        voicePrimaryBtn.classList.add("btn-danger");
+        voicePrimaryBtn.disabled = false;
+      }
+      if (voicePrimaryLabel) voicePrimaryLabel.textContent = "End Call";
+      if (voiceMicOrb) voiceMicOrb.disabled = false;
+      if (voiceMuteBtn) voiceMuteBtn.disabled = false;
+      voiceAudioBars?.classList.add("listening");
+      startVoiceAudioVisualizer();
+      break;
+
+    case "speaking":
+      if (voiceStatusText) voiceStatusText.textContent = "Speaking...";
+      if (voiceFeedbackTitle) voiceFeedbackTitle.textContent = "Academic Assistant Speaking";
+      if (voiceFeedbackSubtitle) voiceFeedbackSubtitle.textContent = "Synthesizing answer grounded in verified university knowledge...";
+      voiceMicSvg?.classList.add("hidden");
+      voiceHangupSvg?.classList.remove("hidden");
+      if (voicePrimaryBtn) {
+        voicePrimaryBtn.classList.remove("btn-primary");
+        voicePrimaryBtn.classList.add("btn-danger");
+        voicePrimaryBtn.disabled = false;
+      }
+      if (voicePrimaryLabel) voicePrimaryLabel.textContent = "End Call";
+      if (voiceMicOrb) voiceMicOrb.disabled = false;
+      if (voiceMuteBtn) voiceMuteBtn.disabled = false;
+      voiceAudioBars?.classList.add("speaking");
+      break;
+  }
+}
+
+// =========================================================================
+// MICROPHONE & AUDIO VISUALIZER (Web Audio API)
+// =========================================================================
+async function setupVoiceMicrophoneStream() {
+  console.log("[ElevenLabs Audio] Requesting microphone access...");
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    throw new Error("Microphone access is not supported by your browser.");
+  }
+
+  voiceMediaStream = await navigator.mediaDevices.getUserMedia({
+    audio: {
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true,
+    },
+  });
+
+  console.log("[ElevenLabs Audio] Microphone access granted.");
+
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    voiceAudioContext = new AudioContextClass();
+    const sourceNode = voiceAudioContext.createMediaStreamSource(voiceMediaStream);
+    voiceAnalyserNode = voiceAudioContext.createAnalyser();
+    voiceAnalyserNode.fftSize = 64;
+    voiceAnalyserNode.smoothingTimeConstant = 0.8;
+    sourceNode.connect(voiceAnalyserNode);
+  } catch (err) {
+    console.warn("[ElevenLabs Audio] Visualizer setup warning (non-fatal):", err);
+  }
+
+  return voiceMediaStream;
+}
+
+function startVoiceAudioVisualizer() {
+  if (!voiceAnalyserNode) return;
+  const dataArray = new Uint8Array(voiceAnalyserNode.frequencyBinCount);
+
+  function renderFrame() {
+    voiceAnalyserNode.getByteFrequencyData(dataArray);
+    voiceVisualizerBars.forEach((bar, index) => {
+      const sample = dataArray[index % dataArray.length];
+      const height = Math.max(5, Math.min(24, (sample / 255) * 26));
+      bar.style.height = `${height}px`;
+    });
+    voiceAnimationFrameId = requestAnimationFrame(renderFrame);
+  }
+
+  cancelAnimationFrame(voiceAnimationFrameId);
+  renderFrame();
+}
+
+function stopVoiceAudioVisualizer() {
+  if (voiceAnimationFrameId) {
+    cancelAnimationFrame(voiceAnimationFrameId);
+    voiceAnimationFrameId = null;
+  }
+  voiceVisualizerBars.forEach((bar) => {
+    bar.style.height = "5px";
+  });
+}
+
+function teardownVoiceMicrophone() {
+  stopVoiceAudioVisualizer();
+  if (voiceMediaStream) {
+    voiceMediaStream.getTracks().forEach((track) => track.stop());
+    voiceMediaStream = null;
+  }
+  if (voiceAudioContext && voiceAudioContext.state !== "closed") {
+    voiceAudioContext.close().catch(console.error);
+    voiceAudioContext = null;
+  }
+}
+
+// =========================================================================
+// ELEVENLABS CONVERSATIONAL AI SESSION LIFECYCLE
+// =========================================================================
+async function startElevenLabsVoiceSession() {
+  if (!ELEVENLABS_AGENT_ID || ELEVENLABS_AGENT_ID === "YOUR_ELEVENLABS_AGENT_ID_HERE" || ELEVENLABS_AGENT_ID.trim() === "") {
+    console.warn("[ElevenLabs] Placeholder Agent ID detected. Showing setup instructions.");
+    agentSetupModal?.showModal();
+    return;
+  }
+
+  try {
+    setVoiceState("connecting");
+    await setupVoiceMicrophoneStream();
+
+    console.log(`[ElevenLabs] Initiating session with Agent ID: ${ELEVENLABS_AGENT_ID}`);
+
+    activeVoiceSession = await Conversation.startSession({
+      agentId: ELEVENLABS_AGENT_ID,
+      onConnect: ({ conversationId }) => {
+        console.log(`[ElevenLabs] Session connected! ID: ${conversationId}`);
+        setVoiceState("listening");
+        appendVoiceTranscript("agent", "I'm listening! You can ask about student records, CRUD operations, or UB policies.");
+      },
+      onDisconnect: () => {
+        console.log("[ElevenLabs] Session disconnected.");
+        endElevenLabsVoiceSession();
+      },
+      onModeChange: ({ mode }) => {
+        console.log(`[ElevenLabs] Mode: ${mode}`);
+        if (mode === "speaking") {
+          setVoiceState("speaking");
+        } else if (mode === "listening") {
+          setVoiceState("listening");
+        }
+      },
+      onMessage: (data) => {
+        console.log("[ElevenLabs] Message received:", data);
+        const speaker = data.source === "user" || data.role === "user" ? "user" : "agent";
+        const messageText = data.message || data.text || "";
+        if (messageText.trim()) {
+          appendVoiceTranscript(speaker, messageText);
+          appendChatMessage(speaker === "agent" ? "bot" : "user", messageText);
+        }
+      },
+      onError: (err) => {
+        console.error("[ElevenLabs] Session error:", err);
+        alert(`ElevenLabs Voice Error: ${err.message || err}`);
+        endElevenLabsVoiceSession();
+      },
+    });
+
+  } catch (error) {
+    console.error("[ElevenLabs] Connection failed:", error);
+    if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
+      alert("Microphone permission was denied. Please allow microphone access in your browser address bar.");
+    } else if (error.name === "NotFoundError" || error.name === "DevicesNotFoundError") {
+      alert("No microphone device was found. Please connect a microphone.");
+    } else {
+      alert(`Could not start ElevenLabs voice session: ${error.message || error}`);
+    }
+    setVoiceState("disconnected");
+    teardownVoiceMicrophone();
+  }
+}
+
+async function endElevenLabsVoiceSession() {
+  if (activeVoiceSession) {
+    try {
+      await activeVoiceSession.endSession();
+    } catch (err) {
+      console.warn("[ElevenLabs] End session notice:", err);
+    } finally {
+      activeVoiceSession = null;
+    }
+  }
+  teardownVoiceMicrophone();
+  setVoiceState("disconnected");
+}
+
+function toggleVoiceMute() {
+  if (!voiceMediaStream) return;
+  isVoiceMuted = !isVoiceMuted;
+  voiceMediaStream.getAudioTracks().forEach((track) => {
+    track.enabled = !isVoiceMuted;
+  });
+  if (isVoiceMuted) {
+    if (voiceMuteLabel) voiceMuteLabel.textContent = "Unmute";
+    voiceMuteBtn?.classList.add("btn-danger");
+    console.log("[ElevenLabs Audio] Mic MUTED");
+  } else {
+    if (voiceMuteLabel) voiceMuteLabel.textContent = "Mute";
+    voiceMuteBtn?.classList.remove("btn-danger");
+    console.log("[ElevenLabs Audio] Mic UNMUTED");
+  }
+}
+
+function appendVoiceTranscript(speaker, text) {
+  if (!voiceTranscriptStream) return;
+  const line = document.createElement("div");
+  line.className = `transcript-line ${speaker}`;
+  line.innerHTML = `<strong>${speaker === "agent" ? "Agent" : "You"}:</strong> ${escapeHTML(text)}`;
+  voiceTranscriptStream.appendChild(line);
+  voiceTranscriptStream.scrollTop = voiceTranscriptStream.scrollHeight;
+}
+
+// Voice Button Event Listeners
+const handleToggleVoiceSession = () => {
+  if (activeVoiceSession) {
+    endElevenLabsVoiceSession();
+  } else {
+    startElevenLabsVoiceSession();
+  }
+};
+
+if (voiceMicOrb) {
+  voiceMicOrb.addEventListener("click", handleToggleVoiceSession);
+}
+
+if (voicePrimaryBtn) {
+  voicePrimaryBtn.addEventListener("click", handleToggleVoiceSession);
+}
+
+if (voiceMuteBtn) {
+  voiceMuteBtn.addEventListener("click", toggleVoiceMute);
+}
+
+// =========================================================================
+// TEXT CHAT CONTROLLER & SMART LOCAL ASSISTANT
+// =========================================================================
+
+// Quick Prompt Chips in Chat Mode
 if (chatChips) {
   chatChips.addEventListener("click", (event) => {
     const chip = event.target.closest(".chip");
@@ -557,7 +964,6 @@ async function sendChatMessage() {
   const studentContext = getLoadedRecordsSummary();
 
   try {
-    // Attempt connecting to local backend server
     const backendUrl = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
       ? `http://${window.location.hostname}:3000/api/chat`
       : "/api/chat";
@@ -582,13 +988,8 @@ async function sendChatMessage() {
     // Display Bot response
     appendChatMessage("bot", data.textResponse, detectedStudent);
 
-    // Play Voice
-    if (voiceToggle && voiceToggle.checked) {
-      if (data.audioBase64) {
-        playElevenLabsAudio(data.audioBase64);
-      } else {
-        speakWithBrowserTts(data.textResponse);
-      }
+    if (data.audioBase64) {
+      playElevenLabsAudio(data.audioBase64);
     }
   } catch (error) {
     console.warn("Backend server connection notice:", error.message);
@@ -597,10 +998,6 @@ async function sendChatMessage() {
     // Fallback directly to client-side smart assistant
     const localResponse = generateClientSideResponse(text, studentContext);
     appendChatMessage("bot", localResponse, detectedStudent);
-
-    if (voiceToggle && voiceToggle.checked) {
-      speakWithBrowserTts(localResponse);
-    }
   }
 }
 
@@ -644,14 +1041,28 @@ function appendChatMessage(sender, text, detectedStudent = null) {
   `;
 
   // Attach click handler for auto-fill button
-  const autoFillBtn = msgEl.querySelector(".student-action-btn");
+  const autoFillBtn = msgEl.querySelector(".student-action-btn, .auto-populate-btn");
   if (autoFillBtn) {
     autoFillBtn.addEventListener("click", () => {
       try {
-        const studentData = JSON.parse(autoFillBtn.dataset.autofill);
+        const studentData = autoFillBtn.dataset.autofill 
+          ? JSON.parse(autoFillBtn.dataset.autofill) 
+          : detectedStudent;
+
+        // Call official form populator
         populateStudentForm(studentData);
-        window.scrollTo({ top: 0, behavior: "smooth" });
-        showMessage(studentMessage, "Student details populated from AI assistant! Click 'Add record' to save.", "success");
+
+        // Scroll to and focus the form
+        const fullNameEl = document.getElementById("full-name");
+        if (fullNameEl) {
+          fullNameEl.scrollIntoView({ behavior: "smooth", block: "center" });
+          fullNameEl.focus();
+        }
+
+        // Show green confirmation message above submit button
+        if (studentMessage) {
+          showMessage(studentMessage, "Student details populated from AI assistant! Click 'Add record' to save.", "success");
+        }
       } catch (err) {
         console.error("Auto-fill error:", err);
       }
@@ -663,17 +1074,17 @@ function appendChatMessage(sender, text, detectedStudent = null) {
 }
 
 function appendTypingIndicator(id) {
-  const loadingEl = document.createElement("div");
-  loadingEl.id = id;
-  loadingEl.className = "chat-message bot";
-  loadingEl.innerHTML = `
+  const typingEl = document.createElement("div");
+  typingEl.id = id;
+  typingEl.className = "chat-message bot typing";
+  typingEl.innerHTML = `
     <div class="msg-content">
       <div class="typing-dots">
         <span></span><span></span><span></span>
       </div>
     </div>
   `;
-  chatMessages.appendChild(loadingEl);
+  chatMessages.appendChild(typingEl);
   chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
@@ -738,7 +1149,7 @@ function parseStudentEntitiesFromText(text) {
   const urlMatch = text.match(/(?:https?:\/\/|www\.)[^\s,]+/i) || text.match(/(?:github\.com|linkedin\.com|portfolio)[:\s/]*([^\s,]+)/i);
   if (urlMatch) result.portfolioLink = urlMatch[0];
 
-  // Favourite technology detection
+  // Favourite technology detection (matches keywords like Flutter, React, Python, etc.)
   const techKeywords = ["flutter", "react", "python", "javascript", "typescript", "java", "c#", "c++", "php", "swift", "kotlin", "node", "unity", "vue", "angular", "firebase", "sql"];
   for (const tech of techKeywords) {
     const regex = new RegExp(`\\b${tech}\\b`, "i");
@@ -761,22 +1172,20 @@ function parseStudentEntitiesFromText(text) {
   return Object.keys(result).length > 0 ? result : null;
 }
 
-/**
- * Basic Markdown Formatter for Chat Output
- */
-function formatChatMarkdown(text) {
-  if (!text) return "";
-  let clean = escapeHTML(text);
+function formatChatMarkdown(rawText) {
+  if (!rawText) return "";
 
-  // Bold text: **word**
+  let clean = escapeHTML(rawText);
+
+  // Bold text
   clean = clean.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
 
-  // Bullet items: • or - item
-  clean = clean.replace(/^[•\-\*]\s+(.*)$/gm, "<li>$1</li>");
-  clean = clean.replace(/(<li>.*<\/li>)/s, "<ul>$1</ul>");
-
-  // Code snippets: `code`
+  // Inline code
   clean = clean.replace(/`([^`]+)`/g, "<code>$1</code>");
+
+  // Bullet items
+  clean = clean.replace(/^[•\-\*]\s+(.*)$/gm, "<li>$1</li>");
+  clean = clean.replace(/(<li>.*<\/li>)/gs, "<ul>$1</ul>");
 
   // Line breaks
   clean = clean.replace(/\n/g, "<br>");
@@ -785,47 +1194,20 @@ function formatChatMarkdown(text) {
 }
 
 /**
- * Audio / Voice Playback Functions
+ * Audio Playback Helpers
  */
 function playElevenLabsAudio(base64Data) {
   stopAllAudio();
   if (ttsAudio) {
     ttsAudio.src = `data:audio/mp3;base64,${base64Data}`;
-    ttsAudio.play().catch((err) => console.warn("Audio autoplay blocked or failed:", err));
+    ttsAudio.play().catch((err) => console.warn("Audio autoplay notice:", err));
   }
-}
-
-function speakWithBrowserTts(text) {
-  if (!("speechSynthesis" in window)) return;
-  stopAllAudio();
-
-  const cleanText = text
-    .replace(/[*#_`>]/g, "")
-    .replace(/<[^>]*>/g, "")
-    .replace(/\n+/g, " ")
-    .slice(0, 400);
-
-  const utterance = new SpeechSynthesisUtterance(cleanText);
-  utterance.rate = 1.0;
-  utterance.pitch = 1.0;
-
-  // Try selecting an English voice
-  const voices = window.speechSynthesis.getVoices();
-  const preferredVoice = voices.find((v) => v.lang.startsWith("en") && (v.name.includes("Natural") || v.name.includes("Google") || v.name.includes("Female")));
-  if (preferredVoice) {
-    utterance.voice = preferredVoice;
-  }
-
-  window.speechSynthesis.speak(utterance);
 }
 
 function stopAllAudio() {
   if (ttsAudio) {
     ttsAudio.pause();
     ttsAudio.currentTime = 0;
-  }
-  if ("speechSynthesis" in window) {
-    window.speechSynthesis.cancel();
   }
 }
 
@@ -854,6 +1236,5 @@ function generateClientSideResponse(message, studentContext) {
     return `Data isolation is protected at two layers:\n1. **Firestore Query Filter**: \`where("ownerId", "==", currentUser.uid)\`\n2. **Firestore Security Rules**: Rules enforce that only the record creator (\`request.auth.uid\`) can read, create, edit, or delete their documents.`;
   }
 
-  return `I am your **University of Batangas Academic Assistant**. You can ask me how to manage records, explain CRUD or security rules, or ask for counts and technologies in your directory!`;
+  return `I am your **University of Batangas Academic Assistant**. You can ask me how to manage records, explain CRUD or security rules, or click "Voice Mode" to speak aloud with our ElevenLabs Conversational AI RAGbot!`;
 }
-
