@@ -773,6 +773,16 @@ footer { padding: 28px; color: var(--muted); font-size: 12px; text-align: center
   box-shadow: 0 4px 12px rgba(190, 18, 60, .3) !important;
 }
 
+.active-mute {
+  background: #7f1d1d !important;
+  color: white !important;
+  border: 2px solid #fca5a5 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, .3) !important;
+}
+.active-mute:hover {
+  background: #991b1b !important;
+}
+
 /* RAG Knowledge Accordion */
 .rag-info-box {
   background: white;

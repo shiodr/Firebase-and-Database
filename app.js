@@ -934,23 +934,33 @@ async function endElevenLabsVoiceSession() {
     }
   }
   teardownVoiceMicrophone();
+  // Always reset mute state so next session starts unmuted
+  isVoiceMuted = false;
+  if (voiceMuteLabel) voiceMuteLabel.textContent = "Mute 🎙️";
+  voiceMuteBtn?.classList.remove("active-mute");
+  voiceMuteBtn?.setAttribute("aria-pressed", "false");
   setVoiceState("disconnected");
 }
 
 function toggleVoiceMute() {
   if (!voiceMediaStream) return;
   isVoiceMuted = !isVoiceMuted;
+
+  // Mute/unmute all audio tracks on the media stream
   voiceMediaStream.getAudioTracks().forEach((track) => {
     track.enabled = !isVoiceMuted;
   });
+
   if (isVoiceMuted) {
-    if (voiceMuteLabel) voiceMuteLabel.textContent = "Unmute";
-    voiceMuteBtn?.classList.add("btn-danger");
-    console.log("[ElevenLabs Audio] Mic MUTED");
+    if (voiceMuteLabel) voiceMuteLabel.textContent = "Unmute 🔇";
+    voiceMuteBtn?.classList.add("active-mute");
+    voiceMuteBtn?.setAttribute("aria-pressed", "true");
+    console.log("[ElevenLabs Audio] Mic MUTED — track.enabled = false");
   } else {
-    if (voiceMuteLabel) voiceMuteLabel.textContent = "Mute";
-    voiceMuteBtn?.classList.remove("btn-danger");
-    console.log("[ElevenLabs Audio] Mic UNMUTED");
+    if (voiceMuteLabel) voiceMuteLabel.textContent = "Mute 🎙️";
+    voiceMuteBtn?.classList.remove("active-mute");
+    voiceMuteBtn?.setAttribute("aria-pressed", "false");
+    console.log("[ElevenLabs Audio] Mic UNMUTED — track.enabled = true");
   }
 }
 
@@ -1026,36 +1036,92 @@ async function sendChatMessage() {
   const detectedStudent = parseStudentEntitiesFromText(text);
 
   // Detect "add/create/save/insert" intent
-  const addIntentPattern = /\b(add|create|save|insert|register|enroll)\b/i;
+  const addIntentPattern = /\b(add|create|save|insert|register|enroll|put|enter)\b/i;
   const hasAddIntent = addIntentPattern.test(text);
+
+  // Detect "find by tech" intent — must NOT contain strong add-intent words
+  const techSearchIntentPattern = /(?:find|show|list|search|who\s+(?:uses?|likes?)|students?\s+(?:who|that|with)|by\s+tech(?:nology)?|favourite\s+tech)/i;
+  const hasTechSearchIntent = !hasAddIntent && techSearchIntentPattern.test(text);
 
   // Prepare Live Student Records Context
   const studentContext = getLoadedRecordsSummary();
 
-  // ── AUTO-SAVE SHORTCUT ──────────────────────────────────────────────────
-  // If the user clearly wants to add a student AND we have all required fields,
-  // skip the button — save directly and confirm, then show the AI response.
-  const requiredFields = ["fullName", "studentID", "programme", "year", "email", "favouriteTechnology"];
-  const hasAllFields = detectedStudent && requiredFields.every((f) => detectedStudent[f]);
-
-  if (hasAddIntent && hasAllFields) {
+  // ── TECH SEARCH SHORTCUT ────────────────────────────────────────────────
+  if (hasTechSearchIntent) {
     removeTypingIndicator(loadingId);
-    const savedId = await saveStudentRecordDirectly(detectedStudent);
-    if (savedId) {
+    appendChatMessage("bot", generateClientSideResponse(text, studentContext));
+    return;
+  }
+
+  // ── ADD STUDENT SHORTCUT ────────────────────────────────────────────────
+  // Handle all add/create/save intents fully on the client — the server cannot write to Firestore.
+  if (hasAddIntent) {
+    removeTypingIndicator(loadingId);
+
+    const requiredFields = ["fullName", "studentID", "programme", "year", "email", "favouriteTechnology"];
+    const hasAllFields = detectedStudent && requiredFields.every((f) => detectedStudent[f]);
+    const hasSomeFields = detectedStudent && Object.keys(detectedStudent).length >= 2;
+
+    if (hasAllFields) {
+      // ✅ All fields present — save directly
+      const savedId = await saveStudentRecordDirectly(detectedStudent);
+      if (savedId) {
+        appendChatMessage(
+          "bot",
+          `✅ Done! All required details detected and saved to your directory.\n\n` +
+          `• **Name:** ${detectedStudent.fullName}\n` +
+          `• **Student ID:** ${detectedStudent.studentID}\n` +
+          `• **Programme:** ${detectedStudent.programme}\n` +
+          `• **Year:** ${detectedStudent.year}\n` +
+          `• **Email:** ${detectedStudent.email}\n` +
+          `• **Favourite Tech:** ${detectedStudent.favouriteTechnology}` +
+          (detectedStudent.portfolioLink ? `\n• **Portfolio:** ${detectedStudent.portfolioLink}` : "") +
+          `\n\nThe records table has been refreshed. ✔️`
+        );
+      }
+      // saveStudentRecordDirectly shows its own error if it fails
+    } else if (hasSomeFields) {
+      // ⚠️ Partial data — populate the form with whatever was detected
+      populateStudentForm(detectedStudent);
+
+      const missingLabels = {
+        fullName: "Full Name", studentID: "Student ID", programme: "Programme",
+        year: "Year", email: "Email", favouriteTechnology: "Favourite Technology",
+      };
+      const missingFields = requiredFields
+        .filter((f) => !detectedStudent[f])
+        .map((f) => `**${missingLabels[f]}**`);
+
+      const filledSummary = requiredFields
+        .filter((f) => detectedStudent[f])
+        .map((f) => `• **${missingLabels[f]}:** ${detectedStudent[f]}`)
+        .join("\n");
+
       appendChatMessage(
         "bot",
-        `✅ Done! I detected all the required details and saved the student record directly to your directory.\n\n` +
-        `• **Name:** ${detectedStudent.fullName}\n` +
-        `• **Student ID:** ${detectedStudent.studentID}\n` +
-        `• **Programme:** ${detectedStudent.programme}\n` +
-        `• **Year:** ${detectedStudent.year}\n` +
-        `• **Email:** ${detectedStudent.email}\n` +
-        `• **Favourite Tech:** ${detectedStudent.favouriteTechnology}` +
-        (detectedStudent.portfolioLink ? `\n• **Portfolio:** ${detectedStudent.portfolioLink}` : "") +
-        `\n\nThe records table below has been refreshed. ✔️`
+        `📝 I detected some student details and pre-filled the form above:\n\n${filledSummary}\n\n` +
+        `Please fill in the missing fields: ${missingFields.join(", ")} — then click **Add record** to save.`,
+        detectedStudent
+      );
+
+      // Scroll the form into view
+      const fullNameEl = document.getElementById("full-name");
+      if (fullNameEl) fullNameEl.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (studentMessage) showMessage(studentMessage, "Form pre-filled! Complete the missing fields and click 'Add record'.", "success");
+    } else {
+      // ℹ️ No data detected — show guidance
+      appendChatMessage(
+        "bot",
+        `To add a student record, please provide the full details:\n\n` +
+        `• **Full Name** (e.g. Juan De La Cruz)\n` +
+        `• **Student ID** (e.g. 2026-0001)\n` +
+        `• **Programme** (e.g. BSIT, BSCS, BSCpE)\n` +
+        `• **Year** (1–6, or "third year")\n` +
+        `• **Email** (e.g. juan@ub.edu.ph)\n` +
+        `• **Favourite Technology** (e.g. Java, Flutter, Python)\n\n` +
+        `You can type them all in one message and I'll detect and save automatically!`
       );
     }
-    // saveStudentRecordDirectly already shows an error/missing-fields message if it fails
     return;
   }
   // ────────────────────────────────────────────────────────────────────────
@@ -1474,28 +1540,116 @@ function stopAllAudio() {
 
 /**
  * Client-Side Smart Fallback Assistant
+ * Handles common query intents using live DOM record data and known facts.
  */
 function generateClientSideResponse(message, studentContext) {
   const q = message.toLowerCase();
 
+  // ── TECH SEARCH ───────────────────────────────────────────────────────────
+  // "show students who like JavaScript", "find by tech: Python", "who uses Flutter"
+  const techSearchPattern = /(?:find|show|list|search|who|students?\s+(?:who|that|with)|by\s+tech(?:nology)?|using|like|use|prefer|favourite\s+tech)/i;
+  if (techSearchPattern.test(q)) {
+    // Extract technology keywords mentioned in the query
+    const techList = [
+      "flutter","react","python","javascript","typescript","java","c#","c++",
+      "php","swift","kotlin","node","unity","vue","angular","firebase","sql",
+      "dart","golang","go","rust","ruby","django","spring","laravel",
+    ];
+    const mentionedTechs = techList.filter((t) => {
+      const escaped = t.replace(/[+#]/g, "\\$&");
+      return new RegExp(`\\b${escaped}\\b`, "i").test(q);
+    });
+
+    // Read live records directly from the DOM table
+    const rows = recordsBody.querySelectorAll("tr[data-record]");
+    const allRecords = [];
+    rows.forEach((row) => {
+      try { allRecords.push(JSON.parse(row.dataset.record)); } catch { /* skip */ }
+    });
+
+    if (allRecords.length === 0) {
+      return `Your directory is empty or you are not logged in. Add some student records first!`;
+    }
+
+    let matched = [];
+
+    if (mentionedTechs.length > 0) {
+      // Filter records whose favouriteTechnology contains any of the mentioned techs
+      matched = allRecords.filter((r) => {
+        const favTech = (r.favouriteTechnology || "").toLowerCase();
+        return mentionedTechs.some((t) => favTech.includes(t.toLowerCase()));
+      });
+
+      if (matched.length === 0) {
+        const techDisplay = mentionedTechs.map((t) => `**${t.charAt(0).toUpperCase() + t.slice(1)}**`).join(" or ");
+        return `No students found with ${techDisplay} as their favourite technology in your current directory.`;
+      }
+
+      const techDisplay = mentionedTechs.map((t) => t.charAt(0).toUpperCase() + t.slice(1)).join(" or ");
+      const list = matched.map((r) =>
+        `• **${escapeTextForChat(r.fullName)}** (${escapeTextForChat(r.programme)}, Year ${r.year}) — ${escapeTextForChat(r.favouriteTechnology)}`
+      ).join("\n");
+      return `Found **${matched.length}** student${matched.length !== 1 ? "s" : ""} with **${techDisplay}** as favourite technology:\n\n${list}`;
+    } else {
+      // No specific tech mentioned — show full tech breakdown
+      const techMap = {};
+      allRecords.forEach((r) => {
+        const tech = (r.favouriteTechnology || "Unknown").trim();
+        if (!techMap[tech]) techMap[tech] = [];
+        techMap[tech].push(r.fullName);
+      });
+      const breakdown = Object.entries(techMap)
+        .sort((a, b) => b[1].length - a[1].length)
+        .map(([tech, names]) => `• **${escapeTextForChat(tech)}** (${names.length}): ${names.map(escapeTextForChat).join(", ")}`)
+        .join("\n");
+      return `Here is the technology breakdown across your ${allRecords.length} student record${allRecords.length !== 1 ? "s" : ""}:\n\n${breakdown}`;
+    }
+  }
+
+  // ── CRUD ──────────────────────────────────────────────────────────────────
   if (q.includes("crud") || q.includes("what is crud")) {
     return `In our University of Batangas system, **CRUD** stands for:\n• **Create**: Fill the student form and click "Add record".\n• **Read**: View your private records in the directory table.\n• **Update**: Click "Edit" to modify any existing record.\n• **Delete**: Click "Delete" to remove a record with confirmation.`;
   }
 
+  // ── COUNT / TOTAL ─────────────────────────────────────────────────────────
   if (q.includes("how many") || q.includes("total") || q.includes("count")) {
-    if (studentContext && !studentContext.includes("0 student records")) {
-      return `Here is the current directory summary:\n${studentContext}`;
+    const rows = recordsBody.querySelectorAll("tr[data-record]");
+    const count = rows.length;
+    if (count === 0) {
+      return `You currently have **0 student records** in your directory. To create one, fill out the form above!`;
     }
-    return `You currently have no records loaded or need to log in to access your directory.`;
+    return `You currently have **${count} student record${count !== 1 ? "s" : ""}** in your directory.\n\n${studentContext || ""}`.trim();
   }
 
+  // ── LIST / SHOW ALL ───────────────────────────────────────────────────────
+  if (q.includes("list all") || q.includes("show all") || q.includes("all students") || q.includes("all records")) {
+    const rows = recordsBody.querySelectorAll("tr[data-record]");
+    if (rows.length === 0) return `Your directory is empty. Add student records using the form above.`;
+    const list = [];
+    rows.forEach((row) => {
+      try {
+        const r = JSON.parse(row.dataset.record);
+        list.push(`• **${escapeTextForChat(r.fullName)}** — ${escapeTextForChat(r.programme)}, Year ${r.year}, ${escapeTextForChat(r.email)}`);
+      } catch { /* skip */ }
+    });
+    return `Here are all **${list.length}** student${list.length !== 1 ? "s" : ""} in your directory:\n\n${list.join("\n")}`;
+  }
+
+  // ── ADD STUDENT ───────────────────────────────────────────────────────────
   if (q.includes("add student") || q.includes("auto-fill") || q.includes("sample")) {
-    return `To add a student record, complete all 6 required fields in the form above. I can also detect details directly from your message—look for the "Populate Add Form" button on detected data cards!`;
+    return `To add a student record, complete all 6 required fields in the form above.\n\nYou can also describe a student in chat (e.g. "Add Juan, ID 2026-0001, BSIT, 3rd year, juan@ub.edu.ph, Java") and the system will detect the fields and auto-save!`;
   }
 
+  // ── SECURITY ─────────────────────────────────────────────────────────────
   if (q.includes("security") || q.includes("isolation") || q.includes("ownerid")) {
     return `Data isolation is protected at two layers:\n1. **Firestore Query Filter**: \`where("ownerId", "==", currentUser.uid)\`\n2. **Firestore Security Rules**: Rules enforce that only the record creator (\`request.auth.uid\`) can read, create, edit, or delete their documents.`;
   }
 
-  return `I am your **University of Batangas Academic Assistant**. You can ask me how to manage records, explain CRUD or security rules, or click "Voice Mode" to speak aloud with our ElevenLabs Conversational AI RAGbot!`;
+  // ── DEFAULT ───────────────────────────────────────────────────────────────
+  return `I am your **University of Batangas Academic Assistant**. Try asking:\n• "Show students who like Java"\n• "How many records do I have?"\n• "Explain CRUD"\n• "Add student Juan De La Cruz, ID 2026-0001, BSIT, 3rd year, juan@ub.edu.ph, Flutter"\n\nOr switch to **Voice Mode** to speak aloud with the ElevenLabs RAGbot!`;
+}
+
+/** Safely escapes text for use in chat markdown (no HTML entity encoding needed here) */
+function escapeTextForChat(str) {
+  return str ? String(str).replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c])) : "";
 }
