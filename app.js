@@ -797,8 +797,8 @@ function teardownVoiceMicrophone() {
 // ELEVENLABS CONVERSATIONAL AI SESSION LIFECYCLE
 // =========================================================================
 async function startElevenLabsVoiceSession() {
-  if (!ELEVENLABS_AGENT_ID || ELEVENLABS_AGENT_ID === "agent_1801m2w415f2f1rvtbhn0p4hgswz" || ELEVENLABS_AGENT_ID.trim() === "") {
-    console.warn("[ElevenLabs] Placeholder Agent ID detected. Showing setup instructions.");
+  if (!ELEVENLABS_AGENT_ID || ELEVENLABS_AGENT_ID.trim() === "" || ELEVENLABS_AGENT_ID === "YOUR_AGENT_ID_HERE" || ELEVENLABS_AGENT_ID === "...") {
+    console.warn("[ElevenLabs] No Agent ID configured. Showing setup instructions.");
     agentSetupModal?.showModal();
     return;
   }

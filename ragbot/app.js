@@ -256,8 +256,8 @@ function teardownMicrophone() {
  */
 async function startSession() {
   // Check if user still has the placeholder ELEVENLABS_AGENT_ID
-  if (!ELEVENLABS_AGENT_ID || ELEVENLABS_AGENT_ID === "agent_1801m2w415f2f1rvtbhn0p4hgswz" || ELEVENLABS_AGENT_ID.trim() === "") {
-    console.warn("[ElevenLabs] Placeholder ELEVENLABS_AGENT_ID detected. Prompting user configuration.");
+  if (!ELEVENLABS_AGENT_ID || ELEVENLABS_AGENT_ID.trim() === "" || ELEVENLABS_AGENT_ID === "YOUR_AGENT_ID_HERE" || ELEVENLABS_AGENT_ID === "...") {
+    console.warn("[ElevenLabs] No ELEVENLABS_AGENT_ID configured. Prompting user configuration.");
     elements.setupModal.showModal();
     return;
   }
