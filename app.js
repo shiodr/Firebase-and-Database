@@ -1637,16 +1637,97 @@ function generateClientSideResponse(message, studentContext) {
 
   // ── ADD STUDENT ───────────────────────────────────────────────────────────
   if (q.includes("add student") || q.includes("auto-fill") || q.includes("sample")) {
-    return `To add a student record, complete all 6 required fields in the form above.\n\nYou can also describe a student in chat (e.g. "Add Juan, ID 2026-0001, BSIT, 3rd year, juan@ub.edu.ph, Java") and the system will detect the fields and auto-save!`;
+    return `To add a student record, complete all 6 required fields in the form above.\n\nYou can also describe a student in one message (e.g. "Add Juan, ID 2026-0001, BSIT, 3rd year, juan@ub.edu.ph, Java") and the system will detect the fields and auto-save!`;
   }
 
-  // ── SECURITY ─────────────────────────────────────────────────────────────
-  if (q.includes("security") || q.includes("isolation") || q.includes("ownerid")) {
-    return `Data isolation is protected at two layers:\n1. **Firestore Query Filter**: \`where("ownerId", "==", currentUser.uid)\`\n2. **Firestore Security Rules**: Rules enforce that only the record creator (\`request.auth.uid\`) can read, create, edit, or delete their documents.`;
+  // ── SECURITY / PRIVACY ────────────────────────────────────────────────────
+  if (q.includes("security") || q.includes("isolation") || q.includes("ownerid") || q.includes("private") || q.includes("privacy")) {
+    return `Your data is **private and isolated** at two layers:\n1. **Firestore Query Filter**: \`where("ownerId", "==", currentUser.uid)\` — queries only return your own records.\n2. **Firestore Security Rules**: Rules at the database level enforce that only the record creator (\`request.auth.uid\`) can read, create, edit, or delete their documents.\n\nOther users cannot see or access your records.`;
+  }
+
+  // ── LOGOUT ────────────────────────────────────────────────────────────────
+  if (q.includes("logout") || q.includes("log out") || q.includes("sign out") || q.includes("signout")) {
+    return `When you **log out**:\n• Your session ends and Firebase clears your authentication token.\n• The records table is hidden and cleared from the UI.\n• Your student records remain **safely stored in Firestore** — they are NOT deleted.\n• The next time you log in with the same account, all your records will be restored automatically.`;
+  }
+
+  // ── LOGIN / RE-LOGIN / PERSISTENCE ────────────────────────────────────────
+  if (q.includes("log back in") || q.includes("login") || q.includes("log in") || q.includes("sign in") ||
+      q.includes("still be there") || q.includes("still there") || q.includes("persist") ||
+      q.includes("come back") || q.includes("next time") || q.includes("logged back")) {
+    return `Yes! ✅ Your records **persist across sessions**. Here is how:\n• Every record is stored in **Cloud Firestore** with your unique user ID (\`ownerId\`).\n• When you log back in, the app automatically fetches all records belonging to your account.\n• Your data is **never lost** when you log out — it stays in the cloud until you explicitly delete it.`;
+  }
+
+  // ── EDIT / UPDATE ─────────────────────────────────────────────────────────
+  if (q.includes("edit") || q.includes("update") || q.includes("modify") || q.includes("change")) {
+    return `To **edit a student record**:\n1. Find the record in the "My Student Records" table.\n2. Click the **Edit** button on the right side of that row.\n3. The form above will be pre-filled with the record's current data.\n4. Make your changes and click **Update record** to save.`;
+  }
+
+  // ── DELETE ────────────────────────────────────────────────────────────────
+  if (q.includes("delete") || q.includes("remove") || q.includes("erase")) {
+    return `To **delete a student record**:\n1. Find the record in the "My Student Records" table.\n2. Click the **Delete** button on the right side of that row.\n3. Confirm the deletion prompt.\n\n⚠️ Deletion is **permanent** — the record is removed from Firestore and cannot be recovered.`;
+  }
+
+  // ── SEARCH / FILTER ────────────────────────────────────────────────────────
+  if (q.includes("filter") || q.includes("find student")) {
+    return `You can **search your records** using the Search box above the directory table. It filters in real time by name, ID, programme, email, or technology.\n\nYou can also ask me: *"Show students who like Java"* and I'll search for you.`;
+  }
+
+  // ── PORTFOLIO ────────────────────────────────────────────────────────────
+  if (q.includes("portfolio")) {
+    return `The **Portfolio Link** field is optional. Enter a URL to a GitHub profile, personal website, or any online portfolio.\n• If provided, a "View portfolio" link appears in the directory table.\n• Supported formats: \`https://github.com/...\`, \`https://yoursite.com\`, etc.`;
+  }
+
+  // ── PROGRAMME / COURSE ───────────────────────────────────────────────────
+  if (q.includes("programme") || q.includes("program") || q.includes("course") || q.includes("bsit") || q.includes("bscs")) {
+    return `Supported **Programmes** at University of Batangas:\n• **BSIT** — Bachelor of Science in Information Technology\n• **BSCS** — Bachelor of Science in Computer Science\n• **BSCpE** — Bachelor of Science in Computer Engineering\n• **BSIS** — Bachelor of Science in Information Systems\n• **BSEMC** — BS in Entertainment and Multimedia Computing\n• **ACT** — Associate in Computer Technology\n\nYou can type the abbreviation (e.g. BSIT) or the full name — the system recognizes both.`;
+  }
+
+  // ── FIREBASE / DATABASE ───────────────────────────────────────────────────
+  if (q.includes("firebase") || q.includes("firestore") || q.includes("database") || q.includes("cloud")) {
+    return `This app uses **Firebase** by Google:\n• **Firebase Authentication** — secure login and session management.\n• **Cloud Firestore** — NoSQL cloud database storing all student records in real time.\n• **Firebase Hosting** — serves the static HTML/CSS/JS files.\n\nFirestore stores each record as a document in the \`students\` collection, tagged with your \`ownerId\` for data isolation.`;
+  }
+
+  // ── WHAT IS THIS APP ─────────────────────────────────────────────────────
+  if (q.includes("what is this") || q.includes("about this") || q.includes("this app") || q.includes("this system") || q.includes("what does")) {
+    return `This is the **University of Batangas Student Records Management System**, built for IPT102 — Integrative Programming and Technologies 2.\n\nFeatures:\n• Full **CRUD** operations on student records.\n• **Firebase Auth** for secure, private per-user data.\n• **Cloud Firestore** for real-time persistence.\n• **AI Chatbot** (this chat!) for queries and auto-adding records.\n• **ElevenLabs Voice RAGbot** for spoken interaction.`;
+  }
+
+  // ── HOW TO USE ────────────────────────────────────────────────────────────
+  if (q.includes("how to") || q.includes("how do i") || q.includes("how can i") || q.includes("steps") || q.includes("guide") || q.includes("instructions")) {
+    return `Quick guide:\n\n**Add a record:** Fill in the form (Full Name, Student ID, Programme, Year, Email, Favourite Tech) → click **Add record**.\n\n**Edit:** Click **Edit** on any table row → change fields → click **Update record**.\n\n**Delete:** Click **Delete** on any row → confirm.\n\n**AI shortcuts:** Ask me "Show students who use Flutter", "How many records?", or describe a student to auto-save.\n\n**Voice mode:** Click "Voice Mode" to speak with the ElevenLabs RAGbot.`;
+  }
+
+  // ── OTHER USER'S DATA (out-of-scope privacy question) ────────────────────
+  // "Can I see another student's records?", "access other users' data", etc.
+  const otherUserPattern = /(?:another\s+(?:student|user|person|account)|other\s+(?:student|user|people|accounts?)|someone\s+else'?s?|other\s+people'?s?|classmate'?s?\s+(?:record|data|info)|access\s+(?:other|another)|view\s+(?:other|another)|see\s+(?:other|another))/i;
+  if (otherUserPattern.test(q)) {
+    return `🔒 **No — you cannot access another user's records.**\n\nThis is by design:\n• Each account's records are **strictly private**, tagged with the owner's unique Firebase UID (\`ownerId\`).\n• Firestore Security Rules enforce at the **database level** that you can only read or write documents where \`ownerId == your UID\`. No query can bypass this.\n• Even if someone knew another user's document ID, the Firestore rule would reject the request with a **"Permission Denied"** error.\n\nThis system is configured to **never invent or expose data it doesn't have access to** — if it isn't yours, it isn't available.`;
+  }
+
+  // ── OUT-OF-SCOPE TOPICS ────────────────────────────────────────────────────
+  // Detect questions clearly outside the student records system domain.
+  const outOfScopeKeywords = [
+    "weather","temperature","forecast","sports","football","basketball","soccer",
+    "movie","film","music","song","artist","celebrity","actor","actress",
+    "recipe","food","cook","restaurant","travel","vacation","hotel","flight",
+    "stock","crypto","bitcoin","investment","politics","election","president",
+    "news","headline","current events","war","history of","capital of",
+    "translate","language","grammar","math problem","calculate","equation",
+    "joke","poem","story","write me a","generate an image",
+  ];
+  const isOutOfScope = outOfScopeKeywords.some((kw) => q.includes(kw));
+  // Also flag questions with no system-related keywords at all
+  const systemKeywords = ["student","record","crud","firebase","firestore","auth","login","logout",
+    "programme","year","email","portfolio","tech","add","edit","delete","update","search",
+    "university","batangas","ipt","ragbot","elevenlabs","voice","data","account"];
+  const hasSystemContext = systemKeywords.some((kw) => q.includes(kw));
+
+  if (isOutOfScope || (!hasSystemContext && q.split(" ").length > 4)) {
+    return `🚫 **That question is outside my knowledge base.**\n\nI am specifically designed for the **University of Batangas Student Records Management System**. I can help with:\n• Managing and querying your **student records**\n• Explaining **CRUD operations** (Create, Read, Update, Delete)\n• Questions about **Firebase Authentication** and **Firestore security**\n• Adding, editing, or deleting student entries\n• Data privacy and how records are isolated per account\n\nFor questions outside this system, I don't have reliable information — and I won't guess or make something up. Please consult the appropriate resource for those topics.`;
   }
 
   // ── DEFAULT ───────────────────────────────────────────────────────────────
-  return `I am your **University of Batangas Academic Assistant**. Try asking:\n• "Show students who like Java"\n• "How many records do I have?"\n• "Explain CRUD"\n• "Add student Juan De La Cruz, ID 2026-0001, BSIT, 3rd year, juan@ub.edu.ph, Flutter"\n\nOr switch to **Voice Mode** to speak aloud with the ElevenLabs RAGbot!`;
+  return `I am your **University of Batangas Academic Assistant**. Try asking:\n• "Will my records still be there when I log back in?"\n• "What happens when I logout?"\n• "Can I see another student's personal information?"\n• "Show students who like Java"\n• "How many records do I have?"\n• "Explain CRUD"\n\nOr switch to **Voice Mode** to speak aloud with the ElevenLabs RAGbot!`;
 }
 
 /** Safely escapes text for use in chat markdown (no HTML entity encoding needed here) */
