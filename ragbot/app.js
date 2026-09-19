@@ -16,7 +16,7 @@ import { Conversation } from "https://cdn.jsdelivr.net/npm/@elevenlabs/client@la
 // Replace the placeholder below with your Agent ID from the ElevenLabs Dashboard.
 // Location: ElevenLabs Dashboard -> Conversational AI -> Your Agent -> Agent ID
 // ============================================================================
-const AGENT_ID = "agent_2001m1pjp56ve6gb66qvq3gp4rw8";
+const ELEVENLABS_AGENT_ID = "agent_1801m2w415f2f1rvtbhn0p4hgswz";
 
 // Application State
 let activeConversation = null;
@@ -255,9 +255,9 @@ function teardownMicrophone() {
  * Initiates an ElevenLabs Conversational AI voice session.
  */
 async function startSession() {
-  // Check if user still has the placeholder AGENT_ID
-  if (!AGENT_ID || AGENT_ID === "agent_2001m1pjp56ve6gb66qvq3gp4rw8" || AGENT_ID.trim() === "") {
-    console.warn("[ElevenLabs] Placeholder AGENT_ID detected. Prompting user configuration.");
+  // Check if user still has the placeholder ELEVENLABS_AGENT_ID
+  if (!ELEVENLABS_AGENT_ID || ELEVENLABS_AGENT_ID === "agent_1801m2w415f2f1rvtbhn0p4hgswz" || ELEVENLABS_AGENT_ID.trim() === "") {
+    console.warn("[ElevenLabs] Placeholder ELEVENLABS_AGENT_ID detected. Prompting user configuration.");
     elements.setupModal.showModal();
     return;
   }
@@ -268,11 +268,11 @@ async function startSession() {
     // 1. Request microphone permission
     await setupMicrophoneStream();
 
-    console.log(`[ElevenLabs] Starting session for Agent ID: ${AGENT_ID}...`);
+    console.log(`[ElevenLabs] Starting session for Agent ID: ${ELEVENLABS_AGENT_ID}...`);
 
     // 2. Start Conversation Session via ElevenLabs SDK
     activeConversation = await Conversation.startSession({
-      agentId: AGENT_ID,
+      agentId: ELEVENLABS_AGENT_ID,
       
       // Fired when connection is established
       onConnect: ({ conversationId }) => {

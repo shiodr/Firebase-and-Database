@@ -504,7 +504,7 @@ function escapeHTML(value) {
  * Location: ElevenLabs Dashboard -> Conversational AI -> Your Agent -> Copy Agent ID
  * -------------------------------------------------------------------------
  */
-const ELEVENLABS_AGENT_ID = "agent_2001m1pjp56ve6gb66qvq3gp4rw8";
+const ELEVENLABS_AGENT_ID = "agent_1801m2w415f2f1rvtbhn0p4hgswz";
 
 // ElevenLabs Voice Session State
 let activeVoiceSession = null;
@@ -797,7 +797,7 @@ function teardownVoiceMicrophone() {
 // ELEVENLABS CONVERSATIONAL AI SESSION LIFECYCLE
 // =========================================================================
 async function startElevenLabsVoiceSession() {
-  if (!ELEVENLABS_AGENT_ID || ELEVENLABS_AGENT_ID === "YOUR_ELEVENLABS_AGENT_ID_HERE" || ELEVENLABS_AGENT_ID.trim() === "") {
+  if (!ELEVENLABS_AGENT_ID || ELEVENLABS_AGENT_ID === "agent_1801m2w415f2f1rvtbhn0p4hgswz" || ELEVENLABS_AGENT_ID.trim() === "") {
     console.warn("[ElevenLabs] Placeholder Agent ID detected. Showing setup instructions.");
     agentSetupModal?.showModal();
     return;
